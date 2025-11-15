@@ -34,9 +34,9 @@
             font-size: 14px;
         }
 
-        /* Pirma kolona – siaura, centruota */
-        table.dataTable tbody td:first-child,
-        table.dataTable thead th:first-child {
+        /* 1-o stulpelio centravimas */
+        table.dataTable thead th:first-child,
+        table.dataTable tbody td:first-child {
             text-align: center;
         }
     </style>
@@ -50,9 +50,9 @@
 
 <div class="tipas-blokas">
     Patarimas: norėdami patogiai peržiūrėti duomenis, spauskite ant stulpelių
-    pavadinimų („Nedalyvavo“, „Prieš“, „Už“, „Susilaikė“, „Registravosi“,
-    „Už A“, „Už B“). Lentelė iškart bus surikiuota pagal pasirinktą pjūvį –
-    taip lengviau matyti, kas daugiausiai nedalyvavo, balsavo prieš ar susilaikė.
+    pavadinimų („Nedalyvavo“, „Prieš“, „Už“, „Susilaikė“, „Registravosi“, „Už A“, „Už B“).
+    Lentelė iškart bus surikiuota pagal pasirinktą pjūvį – taip lengviau matyti,
+    kas daugiausiai nedalyvavo, balsavo prieš ar susilaikė.
 </div>
 
 <table id="balsavimai" class="display" style="width:100%">
@@ -87,44 +87,71 @@
     $(document).ready(function () {
         Papa.parse("metu_balsavimas1.csv", {
             download: true,
-            header: true,
+            header: false,        // NE naudojame antraštes kaip laukų pavadinimus
             skipEmptyLines: true,
-            delimiter: ";",          // svarbu LT CSV (kabliataskis)
+            delimiter: ";",       // svarbu, nes LT CSV dažnai su kabliataškiu
             complete: function (results) {
-                var data = results.data;
+                var rows = results.data;
+
+                // pirmą eilutę (antraštes) išmetam
+                if (rows.length > 0) {
+                    rows.shift();
+                }
+
+                // rows dabar yra masyvas, kur:
+                // [0] – Seimo narys
+                // [1] – Nedalyvavo
+                // [2] – Prieš
+                // [3] – Už
+                // [4] – Susilaikė
+                // [5] – Registravosi
+                // [6] – Už A
+                // [7] – Už B
 
                 $('#balsavimai').DataTable({
-                    data: data,
-                    autoWidth: false,  // leis mums valdyti plotį
+                    data: rows,
+                    autoWidth: false,
                     columns: [
                         {
-                            // Eil. Nr. – generuojamas numeris
                             data: null,
                             render: function (data, type, row, meta) {
+                                // Eil. Nr. – stabilus 1…141, nepriklausomai nuo rikiavimo
                                 return meta.row + 1;
                             },
                             orderable: false,
                             searchable: false
                         },
-                        {data: "Seimo narys"},
-                        {data: "Nedalyvavo"},
-                        {data: "Prieš"},
-                        {data: "Už"},
-                        {data: "Susilaikė"},
-                        {data: "Registravosi"},
-                        {data: "Už A"},
-                        {data: "Už B"}
+                        {data: 0},
+                        {data: 1},
+                        {data: 2},
+                        {data: 3},
+                        {data: 4},
+                        {data: 5},
+                        {data: 6},
+                        {data: 7}
                     ],
-                    order: [[1, "asc"]],  // pradinis rikiavimas pagal pavardes
+                    order: [[1, 'asc']],   // pradinis rikiavimas pagal pavardes
                     pageLength: 25,
                     language: {
-                        url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/lt-LT.json"
+                        decimal: ",",
+                        thousands: " ",
+                        emptyTable: "Duomenų nėra",
+                        lengthMenu: "Rodyti _MENU_ įrašus",
+                        info: "Rodomi _START_–_END_ iš _TOTAL_ įrašų",
+                        infoEmpty: "Rodomi 0–0 iš 0 įrašų",
+                        infoFiltered: "(atrinkta iš _MAX_ įrašų)",
+                        search: "Ieškoti:",
+                        zeroRecords: "Atitinkančių įrašų nerasta",
+                        paginate: {
+                            first: "Pirmas",
+                            last: "Paskutinis",
+                            next: "Kitas",
+                            previous: "Ankstesnis"
+                        }
                     },
                     columnDefs: [
-                        // 1 kolona – siaura
-                        {targets: 0, width: "55px"},
-                        // 2 kolona – platesnė (vardas + pavardė)
-                        {targets: 1, width: "260px"}
+                        {targets: 0, width: "55px"},   // Eil. Nr.
+                        {targets: 1, width: "260px"}   // Seimo narys
                     ]
                 });
             }
