@@ -2,11 +2,12 @@
 <html lang="lt">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Seimo narių balsavimo statistika</title>
 
-    <!-- DataTables CSS -->
+    <!-- DataTables + jQuery -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
+    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
     <style>
         body {
@@ -29,62 +30,52 @@
 
         .hint {
             margin-top: 0;
-            margin-bottom: 1.2rem;
+            margin-bottom: 1rem;
             font-size: 0.95rem;
             color: #333;
             background: #f2f2f2;
-            padding: 12px 14px;
+            padding: 10px 14px;
             border-radius: 6px;
             display: inline-block;
-            max-width: 1200px;
-            line-height: 1.4;
+            max-width: 1100px;
         }
 
-        /* Lentelės dizainas */
-        #balsavimai {
-            width: 100%;
-            border-collapse: collapse;
+        /* Eil. Nr. – susiaurintas */
+        #balsavimai th:nth-child(1),
+        #balsavimai td:nth-child(1) {
+            width: 40px !important;
+            max-width: 40px !important;
+            text-align: center;
+        }
+
+        /* Seimo narys – praplatintas */
+        #balsavimai th:nth-child(2),
+        #balsavimai td:nth-child(2) {
+            width: 260px !important;
+            min-width: 260px !important;
         }
 
         #balsavimai thead th {
             white-space: nowrap;
             cursor: pointer;
-            position: relative;
             padding-right: 16px;
-            font-size: 15px;
-        }
-
-        /* 1 stulpelis (Eil. Nr.) – siauras */
-        #balsavimai th:nth-child(1),
-        #balsavimai td:nth-child(1) {
-            width: 40px !important;
-            max-width: 40px !important;
-            min-width: 40px !important;
-            text-align: center !important;
-        }
-
-        /* 2 stulpelis – Seimo narys (platus) */
-        #balsavimai th:nth-child(2),
-        #balsavimai td:nth-child(2) {
-            width: 260px !important;
-            min-width: 260px !important;
-            text-align: left;
         }
     </style>
 </head>
+
 <body>
 
 <h1>Seimo narių balsavimo statistika</h1>
 <p class="subtitle">Laikotarpis: 2024-11-14 – 2025-11-14</p>
 
-<div class="hint">
+<p class="hint">
     Patarimas: norėdami patogiai peržiūrėti duomenis, spauskite ant stulpelių pavadinimų 
     („Nedalyvavo“, „Prieš“, „Už“, „Susilaikė“, „Registravosi“, „Už A“, „Už B“). 
-    Lentelė iškart bus surikiuota pagal pasirinktą pjūvį – taip lengviau matyti, kas daugiausiai 
-    nedalyvavo, balsavo prieš ar susilaikė.
-</div>
+    Lentelė bus automatiškai surikiuota pagal pasirinktą pjūvį – taip lengviau matyti, 
+    kas daugiausiai nedalyvavo, balsavo prieš ar susilaikė.
+</p>
 
-<table id="balsavimai" class="display">
+<table id="balsavimai" class="display" style="width:100%">
     <thead>
         <tr>
             <th>Eil. Nr.</th>
@@ -101,59 +92,49 @@
     <tbody></tbody>
 </table>
 
-<!-- jQuery -->
-<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
-
-<!-- DataTables JS -->
-<script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-
-<!-- PapaParse CSV loader -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
-
 <script>
 $(document).ready(function () {
 
-    Papa.parse("metu_balsavimas1.csv", {
-        download: true,
-        header: true,
-        complete: function (results) {
+    $.get("metu_balsavimas1.csv", function (csv) {
 
-            let data = results.data;
+        const lines = csv.trim().split("\n");
+        const data = [];
 
-            // išrūšiuojame pagal pavardę (2 stulpelis), kaip pirminę tvarką
-            data.sort((a, b) => (a["Seimo narys"] > b["Seimo narys"]) ? 1 : -1);
+        for (let i = 1; i < lines.length; i++) {
+            const cols = lines[i].split(",");
 
-            let tableData = [];
-
-            data.forEach((row, index) => {
-                tableData.push([
-                    index + 1,                    // stabili numeracija 1-141
-                    row["Seimo narys"],
-                    row["Nedalyvavo"],
-                    row["Prieš"],
-                    row["Už"],
-                    row["Susilaikė"],
-                    row["Registravosi"],
-                    row["Už A"],
-                    row["Už B"]
-                ]);
-            });
-
-            $("#balsavimai").DataTable({
-                data: tableData,
-                pageLength: 25,
-                lengthMenu: [25, 50, 100, 141],
-                order: [],   
-                language: {
-                    search: "Ieškoti:",
-                    lengthMenu: "Rodyti _MENU_ įrašus"
-                },
-                columnDefs: [
-                    { orderable: false, targets: 0 } // Eil. Nr. nerūšiuojamas
-                ]
-            });
+            data.push([
+                i,               // Statinė numeracija 1–141
+                cols[0],         // Seimo narys
+                cols[1],         // Nedalyvavo
+                cols[2],         // Prieš
+                cols[3],         // Už
+                cols[4],         // Susilaikė
+                cols[5],         // Registravosi
+                cols[6],         // Už A
+                cols[7]          // Už B
+            ]);
         }
+
+        $("#balsavimai").DataTable({
+            data: data,
+            pageLength: 25,
+            lengthMenu: [25, 50, 100, 141],
+            order: [],                     // Pradžioje — pagal abėcėlę iš CSV
+            language: {
+                search: "Ieškoti:",
+                lengthMenu: "Rodyti _MENU_ įrašus",
+                info: "Rodoma _START_-_END_ iš _TOTAL_ įrašų",
+                paginate: {
+                    next: "Kitas",
+                    previous: "Ankstesnis"
+                },
+                zeroRecords: "Nieko nerasta"
+            }
+        });
+
     });
+
 });
 </script>
 
