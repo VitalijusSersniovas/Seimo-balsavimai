@@ -48,7 +48,7 @@
     <tbody></tbody>
 </table>
 
-<!-- Libraries -->
+<!-- Bibliotekos: svarbi eilės tvarka! -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -70,13 +70,53 @@ document.addEventListener("DOMContentLoaded", function() {
                 var r = rows[i];
                 if (!r || r.length < 9) continue;
 
-                // Į DATA įdedame ir originalų eilės nr., bet tik kaip žalią duomenį (vėliau jo nerodysim)
+                // SĄMONINGAI NENAUDOJAME CSV EIL. NR. (r[0])
                 data.push([
-                    parseInt(r[0] || "0", 10), // 0: originalus Eil. Nr. (tik jei kada prireiks)
-                    r[1],                      // 1: Seimo narys
-                    parseInt(r[2] || "0", 10), // 2: Nedalyvavo
-                    parseInt(r[3] || "0", 10), // 3: Prieš
-                    parseInt(r[4] || "0", 10), // 4: Už
-                    parseInt(r[5] || "0", 10), // 5: Susilaikė
-                    parseInt(r[6] || "0", 10), // 6: Registravosi
-                    parseInt(r[7] || "0", 10), // 7: Už A
+                    r[1],                      // 0: Seimo narys
+                    parseInt(r[2] || "0", 10), // 1: Nedalyvavo
+                    parseInt(r[3] || "0", 10), // 2: Prieš
+                    parseInt(r[4] || "0", 10), // 3: Už
+                    parseInt(r[5] || "0", 10), // 4: Susilaikė
+                    parseInt(r[6] || "0", 10), // 5: Registravosi
+                    parseInt(r[7] || "0", 10), // 6: Už A
+                    parseInt(r[8] || "0", 10)  // 7: Už B
+                ]);
+            }
+
+            new DataTable("#balsavimai", {
+                data: data,
+                columns: [
+                    {   // Eil. Nr. – VISADA skaičiuojamas iš eilutės pozicijos
+                        data: null,
+                        searchable: false,
+                        orderable: false,
+                        render: function (data, type, row, meta) {
+                            // meta.row – indeksas puslapyje nuo 0
+                            return meta.row + 1;
+                        }
+                    },
+                    { data: 0 }, // Seimo narys
+                    { data: 1 }, // Nedalyvavo
+                    { data: 2 }, // Prieš
+                    { data: 3 }, // Už
+                    { data: 4 }, // Susilaikė
+                    { data: 5 }, // Registravosi
+                    { data: 6 }, // Už A
+                    { data: 7 }  // Už B
+                ],
+                // Pradinis vaizdas – abėcėle pagal Seimo narį
+                order: [[1, "asc"]],
+                pageLength: 25,
+                lengthMenu: [[10, 25, 50, 141, -1], [10, 25, 50, 141, "Visi"]],
+                language: {
+                    url: "https://cdn.datatables.net/plug-ins/2.1.8/i18n/lt.json"
+                }
+            });
+        }
+    });
+
+});
+</script>
+
+</body>
+</html>
