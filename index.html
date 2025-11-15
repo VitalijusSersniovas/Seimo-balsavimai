@@ -34,7 +34,7 @@
             font-size: 14px;
         }
 
-        /* 1-o stulpelio centravimas */
+        /* 1-o stulpelio centravimas ir siaurinimas */
         table.dataTable thead th:first-child,
         table.dataTable tbody td:first-child {
             text-align: center;
@@ -87,48 +87,42 @@
     $(document).ready(function () {
         Papa.parse("metu_balsavimas1.csv", {
             download: true,
-            header: false,        // NE naudojame antraštes kaip laukų pavadinimus
+            header: false,        // nenaudojame CSV antraščių
             skipEmptyLines: true,
-            delimiter: ";",       // svarbu, nes LT CSV dažnai su kabliataškiu
+            delimiter: ";",       // jei faile kabletaškiai (dažnas LT atvejis)
             complete: function (results) {
                 var rows = results.data;
 
-                // pirmą eilutę (antraštes) išmetam
-                if (rows.length > 0) {
-                    rows.shift();
-                }
-
-                // rows dabar yra masyvas, kur:
-                // [0] – Seimo narys
-                // [1] – Nedalyvavo
-                // [2] – Prieš
-                // [3] – Už
-                // [4] – Susilaikė
-                // [5] – Registravosi
-                // [6] – Už A
-                // [7] – Už B
+                // Išfiltruojame tik tikras eilutes su Seimo nario vardu/pavarde.
+                // Aiškinamosios eilutės (kur pirmas stulpelis tuščias) bus atmestos.
+                var dataRows = rows.filter(function (row) {
+                    return row.length >= 2 &&
+                        row[0] !== null &&
+                        row[0] !== undefined &&
+                        row[0].toString().trim() !== "";
+                });
 
                 $('#balsavimai').DataTable({
-                    data: rows,
+                    data: dataRows,
                     autoWidth: false,
                     columns: [
                         {
                             data: null,
                             render: function (data, type, row, meta) {
-                                // Eil. Nr. – stabilus 1…141, nepriklausomai nuo rikiavimo
+                                // Eil. Nr. – stabilus 1…N, nepriklausomai nuo rikiavimo
                                 return meta.row + 1;
                             },
                             orderable: false,
                             searchable: false
                         },
-                        {data: 0},
-                        {data: 1},
-                        {data: 2},
-                        {data: 3},
-                        {data: 4},
-                        {data: 5},
-                        {data: 6},
-                        {data: 7}
+                        {data: 0}, // Seimo narys
+                        {data: 1}, // Nedalyvavo
+                        {data: 2}, // Prieš
+                        {data: 3}, // Už
+                        {data: 4}, // Susilaikė
+                        {data: 5}, // Registravosi
+                        {data: 6}, // Už A
+                        {data: 7}  // Už B
                     ],
                     order: [[1, 'asc']],   // pradinis rikiavimas pagal pavardes
                     pageLength: 25,
