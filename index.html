@@ -51,10 +51,10 @@
             width: 100%;
         }
 
-        /* 🔥 PRIDĖTA: lentelės antraštė priklijuojama viršuje skrolinant */
+        /* Priklijuojama lentelės antraštė */
         #balsavimai thead {
             position: sticky;
-            top: 160px;  /* gali reikėti pakoreguoti iki 150–190 priklausomai nuo ekrano */
+            top: 160px;   /* atstumas žemiau viršutinės juostos */
             z-index: 50;
             background: white;
         }
@@ -110,34 +110,39 @@
                 var rows = results.data;
                 var data = [];
 
+                // Duomenys prasideda nuo 4 eilutės (indeksas 3)
                 for (var i = 3; i < rows.length; i++) {
                     var r = rows[i];
                     if (!r || r.length < 9) continue;
 
                     data.push([
                         r[1],                          // Seimo narys
-                        parseInt(r[2] || "0", 10),
-                        parseInt(r[3] || "0", 10),
-                        parseInt(r[4] || "0", 10),
-                        parseInt(r[5] || "0", 10),
-                        parseInt(r[6] || "0", 10),
-                        parseInt(r[7] || "0", 10),
-                        parseInt(r[8] || "0", 10)
+                        parseInt(r[2] || "0", 10),     // Nedalyvavo
+                        parseInt(r[3] || "0", 10),     // Prieš
+                        parseInt(r[4] || "0", 10),     // Už
+                        parseInt(r[5] || "0", 10),     // Susilaikė
+                        parseInt(r[6] || "0", 10),     // Registravosi
+                        parseInt(r[7] || "0", 10),     // Už A
+                        parseInt(r[8] || "0", 10)      // Už B
                     ]);
                 }
 
                 var table = $('#balsavimai').DataTable({
                     data: data,
                     columns: [
-                        { data: null, searchable: false, orderable: false },
-                        { data: 0 },
-                        { data: 1 },
-                        { data: 2 },
-                        { data: 3 },
-                        { data: 4 },
-                        { data: 5 },
-                        { data: 6 },
-                        { data: 7 }
+                        {   // Eil. Nr. – pildysime draw metu
+                            data: null,
+                            searchable: false,
+                            orderable: false
+                        },
+                        {data: 0}, // Seimo narys
+                        {data: 1}, // Nedalyvavo
+                        {data: 2}, // Prieš
+                        {data: 3}, // Už
+                        {data: 4}, // Susilaikė
+                        {data: 5}, // Registravosi
+                        {data: 6}, // Už A
+                        {data: 7}  // Už B
                     ],
                     order: [[1, "asc"]],
                     pageLength: 25,
@@ -147,6 +152,7 @@
                     }
                 });
 
+                // Stabilus Eil. Nr. per visus pjūvius
                 table.on('draw.dt', function () {
                     var info = table.page.info();
                     table.column(0, {page: 'current'}).nodes().each(function (cell, i) {
