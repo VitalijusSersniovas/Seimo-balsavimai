@@ -48,7 +48,7 @@
     <tbody></tbody>
 </table>
 
-<!-- Bibliotekos: svarbi eilės tvarka! -->
+<!-- Bibliotekos -->
 <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 <script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
@@ -65,12 +65,12 @@ document.addEventListener("DOMContentLoaded", function() {
             var rows = results.data;
             var data = [];
 
-            // Pirmos 3 eilutės – antraštės, tikrieji duomenys nuo 4-os
+            // Pirmos 3 eilutės – antraštės, duomenys nuo 4-os
             for (var i = 3; i < rows.length; i++) {
                 var r = rows[i];
                 if (!r || r.length < 9) continue;
 
-                // SĄMONINGAI NENAUDOJAME CSV EIL. NR. (r[0])
+                // CSV Eil. Nr. visiškai ignoruojame – pradedame nuo r[1]
                 data.push([
                     r[1],                      // 0: Seimo narys
                     parseInt(r[2] || "0", 10), // 1: Nedalyvavo
@@ -83,17 +83,14 @@ document.addEventListener("DOMContentLoaded", function() {
                 ]);
             }
 
-            new DataTable("#balsavimai", {
+            var table = new DataTable("#balsavimai", {
                 data: data,
                 columns: [
-                    {   // Eil. Nr. – VISADA skaičiuojamas iš eilutės pozicijos
+                    {   // Eil. Nr. – laikinai tuščias, užpildysim draw įvykyje
                         data: null,
                         searchable: false,
                         orderable: false,
-                        render: function (data, type, row, meta) {
-                            // meta.row – indeksas puslapyje nuo 0
-                            return meta.row + 1;
-                        }
+                        defaultContent: ""
                     },
                     { data: 0 }, // Seimo narys
                     { data: 1 }, // Nedalyvavo
@@ -112,6 +109,18 @@ document.addEventListener("DOMContentLoaded", function() {
                     url: "https://cdn.datatables.net/plug-ins/2.1.8/i18n/lt.json"
                 }
             });
+
+            // KIEKVIENĄ KARTĄ, kai lentelė perpiešiama (rūšiavimas, filtras, puslapis) –
+            // perrašome pirmą stulpelį: 1,2,3,... pagal matomą sąrašą
+            table.on('draw', function () {
+                var info = table.page.info();
+                table.column(0, { page: 'current' }).nodes().each(function (cell, i) {
+                    cell.innerHTML = info.start + i + 1;
+                });
+            });
+
+            // Iškart po pirmo užpildymo taip pat priskiriame numeraciją
+            table.draw();
         }
     });
 
