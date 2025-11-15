@@ -63,19 +63,40 @@
 
     <script>
         document.addEventListener("DOMContentLoaded", function() {
-            // Nuskaitome CSV failą iš šio paties repo
             fetch("metu_balsavimas1.csv")
                 .then(function(response) { return response.text(); })
                 .then(function(csvText) {
-                    // Konvertuojame CSV į objektų masyvą
+                    // Nuskaitome CSV be antraščių (jos pas tave užima kelias eilutes)
                     var parsed = Papa.parse(csvText, {
-                        header: true,
+                        header: false,
                         skipEmptyLines: true
                     });
 
-                    var data = parsed.data;
+                    var rows = parsed.data;
+                    var data = [];
 
-                    // Inicijuojame DataTable su CSV duomenimis
+                    // rows[0] - "Eil. Nr., Seimo nariai, BALSAVIMAI, ..."
+                    // rows[1] - " , , Pagrindiniai, ..."
+                    // rows[2] - " , , Nedalyvavo, Prieš, Už, ..."
+                    // Nuo rows[3] prasideda tikrieji duomenys
+                    for (var i = 3; i < rows.length; i++) {
+                        var r = rows[i];
+                        if (!r || r.length < 9) continue;
+                        if (!r[0]) continue; // praleidžiam tuščias eilutes
+
+                        data.push({
+                            "Eil. Nr.": r[0],
+                            "Seimo narys": r[1],
+                            "Nedalyvavo": r[2],
+                            "Prieš": r[3],
+                            "Už": r[4],
+                            "Susilaikė": r[5],
+                            "Registravosi": r[6],
+                            "Už A": r[7],
+                            "Už B": r[8]
+                        });
+                    }
+
                     new DataTable('#balsavimai', {
                         data: data,
                         columns: [
@@ -89,12 +110,11 @@
                             { data: "Už A" },
                             { data: "Už B" }
                         ],
-                        // Rodom visus 141 įrašą iš karto
-                        pageLength: 141,
+                        // rodom 141 įrašą, bet galima persijungti į mažiau / visus
+                        pageLength: 25,
                         lengthMenu: [[10, 25, 50, 141, -1], [10, 25, 50, 141, "Visi"]],
-                        // Pradinis eiliškumas – toks, koks faile (1–141)
+                        // Fiksuotas eiliškumas pagal failą (1–141): nenurodom pradinio rikiavimo
                         order: [],
-                        // Eilės numerio stulpelis – nerūšiuojamas ir nefiltruojamas
                         columnDefs: [
                             { targets: 0, orderable: false, searchable: false }
                         ],
