@@ -12,6 +12,15 @@
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI";
             margin: 20px;
         }
+        h1 {
+            margin-bottom: 0.2rem;
+        }
+        .subtitle {
+            margin-top: 0;
+            margin-bottom: 1rem;
+            color: #555;
+            font-size: 0.9rem;
+        }
         table.dataTable thead th {
             white-space: nowrap;
         }
@@ -20,21 +29,21 @@
 <body>
 
 <h1>Seimo narių balsavimo statistika</h1>
-<p>Laikotarpis: 2024-11-14 – 2025-11-14</p>
+<p class="subtitle">Laikotarpis: 2024-11-14 – 2025-11-14</p>
 
 <table id="balsavimai" class="display" style="width:100%">
     <thead>
-    <tr>
-        <th>Eil. Nr.</th>
-        <th>Seimo narys</th>
-        <th>Nedalyvavo</th>
-        <th>Prieš</th>
-        <th>Už</th>
-        <th>Susilaikė</th>
-        <th>Registravosi</th>
-        <th>Už A</th>
-        <th>Už B</th>
-    </tr>
+        <tr>
+            <th>Eil. Nr.</th>
+            <th>Seimo narys</th>
+            <th>Nedalyvavo</th>
+            <th>Prieš</th>
+            <th>Už</th>
+            <th>Susilaikė</th>
+            <th>Registravosi</th>
+            <th>Už A</th>
+            <th>Už B</th>
+        </tr>
     </thead>
     <tbody></tbody>
 </table>
@@ -56,42 +65,34 @@ document.addEventListener("DOMContentLoaded", function() {
             var rows = results.data;
             var data = [];
 
-            // tikrieji duomenys prasideda nuo 4-os eilutės
+            // Pirmos 3 eilutės – antraštės/komentarai, tikrieji duomenys nuo 4-os
             for (var i = 3; i < rows.length; i++) {
                 var r = rows[i];
-                if (!r || r.length < 9) continue;
+                if (!r || r.length < 9) continue;   // saugiklis
 
-                data.push({
-                    "Eil. Nr.": r[0],
-                    "Seimo narys": r[1],
-                    "Nedalyvavo": r[2],
-                    "Prieš": r[3],
-                    "Už": r[4],
-                    "Susilaikė": r[5],
-                    "Registravosi": r[6],
-                    "Už A": r[7],
-                    "Už B": r[8]
-                });
+                // Čia paduodame EILUTĘ kaip masyvą (be objektų laukų)
+                data.push([
+                    r[0], // Eil. Nr.
+                    r[1], // Seimo narys
+                    r[2], // Nedalyvavo
+                    r[3], // Prieš
+                    r[4], // Už
+                    r[5], // Susilaikė
+                    r[6], // Registravosi
+                    r[7], // Už A
+                    r[8]  // Už B
+                ]);
             }
 
             new DataTable("#balsavimai", {
                 data: data,
-                columns: [
-                    { data: "Eil. Nr." },
-                    { data: "Seimo narys" },
-                    { data: "Nedalyvavo" },
-                    { data: "Prieš" },
-                    { data: "Už" },
-                    { data: "Susilaikė" },
-                    { data: "Registravosi" },
-                    { data: "Už A" },
-                    { data: "Už B" }
-                ],
+                // Čia nenaudojame "data: 'Eil. Nr.'", todėl klaidos nebus –
+                // stulpeliai imami pagal poziciją masyve [0..8]
                 pageLength: 25,
                 lengthMenu: [[10, 25, 50, 141, -1], [10, 25, 50, 141, "Visi"]],
-                order: [],
+                order: [], // nededam pradinio rikiavimo, paliekam 1–141 kaip faile
                 columnDefs: [
-                    { targets: 0, orderable: false, searchable: false }
+                    { targets: 0, orderable: false, searchable: false } // Eil. Nr. – tik rodymui
                 ],
                 language: {
                     url: "https://cdn.datatables.net/plug-ins/2.1.8/i18n/lt.json"
