@@ -70,8 +70,7 @@ document.addEventListener("DOMContentLoaded", function() {
                 var r = rows[i];
                 if (!r || r.length < 9) continue;
 
-                // Čia specialiai NENAUDOJAM Eil. Nr. iš failo
-                // Mums reikia tik faktiškų balsavimo skaičių
+                // ČIA SĄMONINGAI NENAUDOJAME EIL. NR. IŠ FAILO (r[0])
                 data.push([
                     r[1], // 0: Seimo narys
                     parseInt(r[2] || "0", 10), // 1: Nedalyvavo
@@ -87,12 +86,12 @@ document.addEventListener("DOMContentLoaded", function() {
             new DataTable("#balsavimai", {
                 data: data,
                 columns: [
-                    {   // Eil. Nr. – dinamiškai skaičiuojamas pagal eilutės poziciją
+                    {   // Eil. Nr. – dinamiškai skaičiuojamas pagal EILUTĖS POZICIJĄ
                         data: null,
                         searchable: false,
                         orderable: false,
                         render: function (data, type, row, meta) {
-                            // numeruoja matomas eilutes nuo 1 iki N
+                            // numeruoja tai, kas RODOMA ekrane, nuo 1 iki N
                             return meta.row + 1;
                         }
                     },
@@ -105,7 +104,7 @@ document.addEventListener("DOMContentLoaded", function() {
                     { data: 6 }, // Už A
                     { data: 7 }  // Už B
                 ],
-                // Pradinis vaizdas – abėcėle pagal Seimo narį (2-as stulpelis, indeksas 1)
+                // PRADINIS VAIZDAS – abėcėle pagal Seimo nario vardą/pavardę
                 order: [[1, "asc"]],
                 pageLength: 25,
                 lengthMenu: [[10, 25, 50, 141, -1], [10, 25, 50, 141, "Visi"]],
