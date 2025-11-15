@@ -54,10 +54,26 @@
         /* Priklijuojama lentelės antraštė */
         #balsavimai thead {
             position: sticky;
-            top: 160px;   /* atstumas žemiau viršutinės juostos */
+            top: 160px;
             z-index: 50;
             background: white;
         }
+
+        /* --- TAVO PRAŠYTI PAKEITIMAI: stulpelių plotis --- */
+
+        /* 1 stulpelis – labai siauras */
+        #balsavimai th:nth-child(1),
+        #balsavimai td:nth-child(1) {
+            width: 40px;
+            text-align: center;
+        }
+
+        /* 2 stulpelis – platesnis vardams ir pavardėms */
+        #balsavimai th:nth-child(2),
+        #balsavimai td:nth-child(2) {
+            width: 280px;
+        }
+
     </style>
 </head>
 <body>
@@ -152,7 +168,7 @@
                     }
                 });
 
-                // Stabilus Eil. Nr. per visus pjūvius
+                // Stabilus Eil. Nr.
                 table.on('draw.dt', function () {
                     var info = table.page.info();
                     table.column(0, {page: 'current'}).nodes().each(function (cell, i) {
