@@ -51,6 +51,24 @@
             width: 100%;
         }
 
+        /* P R A Š Y T I    P L O T I M O    P A K E I T I M A I */
+
+        /* 1 stulpelis — siauras (tik skaičiams) */
+        #balsavimai th:nth-child(1),
+        #balsavimai td:nth-child(1) {
+            width: 45px;
+            min-width: 45px;
+            max-width: 45px;
+            text-align: center;
+        }
+
+        /* 2 stulpelis — išplėstas vardams/pavardėms */
+        #balsavimai th:nth-child(2),
+        #balsavimai td:nth-child(2) {
+            width: 300px;
+            min-width: 300px;
+        }
+
         /* Priklijuojama lentelės antraštė */
         #balsavimai thead {
             position: sticky;
@@ -58,22 +76,6 @@
             z-index: 50;
             background: white;
         }
-
-        /* --- TAVO PRAŠYTI PAKEITIMAI: stulpelių plotis --- */
-
-        /* 1 stulpelis – labai siauras */
-        #balsavimai th:nth-child(1),
-        #balsavimai td:nth-child(1) {
-            width: 40px;
-            text-align: center;
-        }
-
-        /* 2 stulpelis – platesnis vardams ir pavardėms */
-        #balsavimai th:nth-child(2),
-        #balsavimai td:nth-child(2) {
-            width: 280px;
-        }
-
     </style>
 </head>
 <body>
