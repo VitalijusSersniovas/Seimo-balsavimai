@@ -4,29 +4,15 @@
     <meta charset="UTF-8">
     <title>Seimo narių balsavimo statistika</title>
 
-    <!-- DataTables CSS -->
+    <!-- DataTables (jQuery versija) CSS -->
     <link rel="stylesheet"
           href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css"/>
 
     <style>
         body {
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            margin: 0;
+            margin: 20px;
             background: #ffffff;
-        }
-
-        /* === STICKY viršutinis blokas: pavadinimas + laikotarpis + patarimas === */
-        .top-wrapper {
-            position: sticky;
-            top: 0;
-            z-index: 50;
-            background: white;
-            padding: 20px 20px 5px 20px;
-            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
-        }
-
-        .content {
-            padding: 0 20px 20px 20px;
         }
 
         h1 {
@@ -36,14 +22,14 @@
 
         .subtitle {
             margin-top: 0;
-            margin-bottom: 0.8rem;
+            margin-bottom: 0.5rem;
             color: #444;
             font-size: 0.95rem;
         }
 
         .hint {
             margin-top: 0;
-            margin-bottom: 1.2rem;
+            margin-bottom: 1rem;
             font-size: 0.95rem;
             color: #333;
             background: #f2f2f2;
@@ -53,132 +39,126 @@
             max-width: 1100px;
         }
 
-        /* Antraštės – be sticky, tik stiliaus detalės */
+        /* Stulpelių antraštės – rodo, kad galima spausti */
         #balsavimai thead th {
             white-space: nowrap;
             cursor: pointer;
+            position: relative;
             padding-right: 16px;
-            background: white;
         }
 
         #balsavimai {
             width: 100%;
         }
 
-        /* 1 stulpelis siauras */
-        #balsavimai td:nth-child(1),
-        #balsavimai th:nth-child(1) {
-            width: 50px !important;
-            text-align: center;
-        }
-
-        /* 2 stulpelis platesnis – vardai/pavardės */
-        #balsavimai td:nth-child(2),
-        #balsavimai th:nth-child(2) {
-            width: 260px !important;
+        /* 🔥 PRIDĖTA: lentelės antraštė priklijuojama viršuje skrolinant */
+        #balsavimai thead {
+            position: sticky;
+            top: 160px;  /* gali reikėti pakoreguoti iki 150–190 priklausomai nuo ekrano */
+            z-index: 50;
+            background: white;
         }
     </style>
 </head>
 <body>
 
-<div class="top-wrapper">
-    <h1>Seimo narių balsavimo statistika</h1>
-    <p class="subtitle">Laikotarpis: 2024-11-14 – 2025-11-14</p>
+<h1>Seimo narių balsavimo statistika</h1>
+<p class="subtitle">Laikotarpis: 2024-11-14 – 2025-11-14</p>
 
-    <p class="hint">
-        Patarimas: norėdami patogiai peržiūrėti duomenis, spauskite ant stulpelių
-        pavadinimų („Nedalyvavo“, „Prieš“, „Už“, „Susilaikė“, „Registravosi“, „Už A“, „Už B“).
-        Lentelė iškart bus surikiuota pagal pasirinktą pjūvį – taip lengviau matyti, kas
-        daugiausiai nedalyvavo, balsavo prieš ar susilaikė.
-    </p>
-</div>
+<p class="hint">
+    Patarimas: norėdami patogiai peržiūrėti duomenis, spauskite ant stulpelių
+    pavadinimų („Nedalyvavo“, „Prieš“, „Už“, „Susilaikė“, „Registravosi“, „Už A“, „Už B“).
+    Lentelė iškart bus surikiuota pagal pasirinktą pjūvį – taip lengviau matyti, kas
+    daugiausiai nedalyvavo, balsavo prieš ar susilaikė.
+</p>
 
-<div class="content">
-    <table id="balsavimai" class="display">
-        <thead>
-        <tr>
-            <th>Eil. Nr.</th>
-            <th>Seimo narys</th>
-            <th>Nedalyvavo</th>
-            <th>Prieš</th>
-            <th>Už</th>
-            <th>Susilaikė</th>
-            <th>Registravosi</th>
-            <th>Už A</th>
-            <th>Už B</th>
-        </tr>
-        </thead>
-        <tbody></tbody>
-    </table>
-</div>
+<table id="balsavimai" class="display">
+    <thead>
+    <tr>
+        <th>Eil. Nr.</th>
+        <th>Seimo narys</th>
+        <th>Nedalyvavo</th>
+        <th>Prieš</th>
+        <th>Už</th>
+        <th>Susilaikė</th>
+        <th>Registravosi</th>
+        <th>Už A</th>
+        <th>Už B</th>
+    </tr>
+    </thead>
+    <tbody></tbody>
+</table>
 
-<!-- JS -->
+<!-- jQuery -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+
+<!-- DataTables JS (jQuery) -->
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
+
+<!-- PapaParse CSV parsavimui -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
 <script>
-$(document).ready(function () {
+    $(document).ready(function () {
 
-    Papa.parse("metu_balsavimas1.csv", {
-        download: true,
-        delimiter: ";",
-        skipEmptyLines: true,
-        complete: function (results) {
+        Papa.parse("metu_balsavimas1.csv", {
+            download: true,
+            delimiter: ";",
+            skipEmptyLines: true,
+            complete: function (results) {
 
-            var rows = results.data;
-            var data = [];
+                var rows = results.data;
+                var data = [];
 
-            // tikri duomenys nuo 4-os eilutės
-            for (var i = 3; i < rows.length; i++) {
-                var r = rows[i];
-                if (!r || r.length < 9) continue;
+                for (var i = 3; i < rows.length; i++) {
+                    var r = rows[i];
+                    if (!r || r.length < 9) continue;
 
-                data.push([
-                    r[1],                          // Seimo narys
-                    parseInt(r[2] || "0", 10),     // Nedalyvavo
-                    parseInt(r[3] || "0", 10),     // Prieš
-                    parseInt(r[4] || "0", 10),     // Už
-                    parseInt(r[5] || "0", 10),     // Susilaikė
-                    parseInt(r[6] || "0", 10),     // Registravosi
-                    parseInt(r[7] || "0", 10),     // Už A
-                    parseInt(r[8] || "0", 10)      // Už B
-                ]);
-            }
-
-            var table = $('#balsavimai').DataTable({
-                data: data,
-                columns: [
-                    {data: null, searchable: false, orderable: false}, // Eil. Nr.
-                    {data: 0}, // Seimo narys
-                    {data: 1}, // Nedalyvavo
-                    {data: 2}, // Prieš
-                    {data: 3}, // Už
-                    {data: 4}, // Susilaikė
-                    {data: 5}, // Registravosi
-                    {data: 6}, // Už A
-                    {data: 7}  // Už B
-                ],
-                order: [[1, "asc"]],
-                pageLength: 25,
-                lengthMenu: [[10,25,50,141,-1],[10,25,50,141,"Visi"]],
-                language: {
-                    url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/lt.json"
+                    data.push([
+                        r[1],                          // Seimo narys
+                        parseInt(r[2] || "0", 10),
+                        parseInt(r[3] || "0", 10),
+                        parseInt(r[4] || "0", 10),
+                        parseInt(r[5] || "0", 10),
+                        parseInt(r[6] || "0", 10),
+                        parseInt(r[7] || "0", 10),
+                        parseInt(r[8] || "0", 10)
+                    ]);
                 }
-            });
 
-            // Stabilus Eil. Nr.
-            table.on('draw.dt', function () {
-                var info = table.page.info();
-                table.column(0, {page: 'current'}).nodes().each(function (cell, i) {
-                    cell.innerHTML = info.start + i + 1;
+                var table = $('#balsavimai').DataTable({
+                    data: data,
+                    columns: [
+                        { data: null, searchable: false, orderable: false },
+                        { data: 0 },
+                        { data: 1 },
+                        { data: 2 },
+                        { data: 3 },
+                        { data: 4 },
+                        { data: 5 },
+                        { data: 6 },
+                        { data: 7 }
+                    ],
+                    order: [[1, "asc"]],
+                    pageLength: 25,
+                    lengthMenu: [[10, 25, 50, 141, -1], [10, 25, 50, 141, "Visi"]],
+                    language: {
+                        url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/lt.json"
+                    }
                 });
-            });
 
-            table.draw();
-        }
+                table.on('draw.dt', function () {
+                    var info = table.page.info();
+                    table.column(0, {page: 'current'}).nodes().each(function (cell, i) {
+                        cell.innerHTML = info.start + i + 1;
+                    });
+                });
+
+                table.draw();
+            }
+        });
+
     });
-});
 </script>
 
 </body>
