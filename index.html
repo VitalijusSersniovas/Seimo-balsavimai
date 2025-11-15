@@ -4,15 +4,30 @@
     <meta charset="UTF-8">
     <title>Seimo narių balsavimo statistika</title>
 
-    <!-- DataTables (jQuery versija) CSS -->
+    <!-- DataTables CSS -->
     <link rel="stylesheet"
           href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css"/>
 
     <style>
         body {
             font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
-            margin: 20px;
+            margin: 0;
             background: #ffffff;
+        }
+
+        /* === STICKY VIRŠUTINIS BLOKAS === */
+        .top-wrapper {
+            position: sticky;
+            top: 0;
+            z-index: 50;
+            background: white;
+            padding: 20px 20px 5px 20px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.15);
+        }
+
+        /* Kad tekstas nepriliptų per arti viršaus */
+        .content {
+            padding: 0 20px 20px 20px;
         }
 
         h1 {
@@ -22,14 +37,14 @@
 
         .subtitle {
             margin-top: 0;
-            margin-bottom: 0.5rem;
+            margin-bottom: 0.8rem;
             color: #444;
             font-size: 0.95rem;
         }
 
         .hint {
             margin-top: 0;
-            margin-bottom: 1rem;
+            margin-bottom: 1.2rem;
             font-size: 0.95rem;
             color: #333;
             background: #f2f2f2;
@@ -39,45 +54,49 @@
             max-width: 1100px;
         }
 
-        /* Stulpelių antraštės – rodo, kad galima spausti */
         #balsavimai thead th {
             white-space: nowrap;
             cursor: pointer;
-            position: relative;
             padding-right: 16px;
+            background: white;
+            position: sticky;
+            top: 145px;   /* žemiau viršutinio bloko */
+            z-index: 40;
         }
 
         #balsavimai {
             width: 100%;
         }
 
-        /* 👇 PIRMAS STULPELIS (EIL. NR.) – SIAURESIS */
+        /* PIRMAS STULPELIS – siauras */
         #balsavimai td:nth-child(1),
         #balsavimai th:nth-child(1) {
             width: 50px !important;
             text-align: center;
         }
 
-        /* 👇 ANTRAS STULPELIS (SEIMO NARYS) – PLATESNIS */
+        /* ANTRAS STULPELIS – platesnis */
         #balsavimai td:nth-child(2),
         #balsavimai th:nth-child(2) {
             width: 260px !important;
         }
-
     </style>
 </head>
 <body>
 
-<h1>Seimo narių balsavimo statistika</h1>
-<p class="subtitle">Laikotarpis: 2024-11-14 – 2025-11-14</p>
+<div class="top-wrapper">
+    <h1>Seimo narių balsavimo statistika</h1>
+    <p class="subtitle">Laikotarpis: 2024-11-14 – 2025-11-14</p>
 
-<p class="hint">
-    Patarimas: norėdami patogiai peržiūrėti duomenis, spauskite ant stulpelių
-    pavadinimų („Nedalyvavo“, „Prieš“, „Už“, „Susilaikė“, „Registravosi“, „Už A“, „Už B“).
-    Lentelė iškart bus surikiuota pagal pasirinktą pjūvį – taip lengviau matyti, kas
-    daugiausiai nedalyvavo, balsavo prieš ar susilaikė.
-</p>
+    <p class="hint">
+        Patarimas: norėdami patogiai peržiūrėti duomenis, spauskite ant stulpelių
+        pavadinimų („Nedalyvavo“, „Prieš“, „Už“, „Susilaikė“, „Registravosi“, „Už A“, „Už B“).
+        Lentelė iškart bus surikiuota pagal pasirinktą pjūvį – taip lengviau matyti, kas
+        daugiausiai nedalyvavo, balsavo prieš ar susilaikė.
+    </p>
+</div>
 
+<div class="content">
 <table id="balsavimai" class="display">
     <thead>
     <tr>
@@ -94,82 +113,71 @@
     </thead>
     <tbody></tbody>
 </table>
+</div>
 
-<!-- jQuery -->
+<!-- JS -->
 <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-
-<!-- DataTables JS (jQuery) -->
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-
-<!-- PapaParse CSV parsavimui -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
 <script>
-    $(document).ready(function () {
+$(document).ready(function () {
 
-        Papa.parse("metu_balsavimas1.csv", {
-            download: true,
-            delimiter: ";",
-            skipEmptyLines: true,
-            complete: function (results) {
+    Papa.parse("metu_balsavimas1.csv", {
+        download: true,
+        delimiter: ";",
+        skipEmptyLines: true,
+        complete: function (results) {
 
-                var rows = results.data;
-                var data = [];
+            var rows = results.data;
+            var data = [];
 
-                // Tikri duomenys prasideda nuo 4 eilutės
-                for (var i = 3; i < rows.length; i++) {
-                    var r = rows[i];
-                    if (!r || r.length < 9) continue;
+            for (var i = 3; i < rows.length; i++) {
+                var r = rows[i];
+                if (!r || r.length < 9) continue;
 
-                    data.push([
-                        r[1],                          // Seimo narys
-                        parseInt(r[2] || "0", 10),
-                        parseInt(r[3] || "0", 10),
-                        parseInt(r[4] || "0", 10),
-                        parseInt(r[5] || "0", 10),
-                        parseInt(r[6] || "0", 10),
-                        parseInt(r[7] || "0", 10),
-                        parseInt(r[8] || "0", 10)
-                    ]);
-                }
-
-                var table = $('#balsavimai').DataTable({
-                    data: data,
-                    columns: [
-                        {
-                            data: null,
-                            searchable: false,
-                            orderable: false
-                        },
-                        {data: 0},
-                        {data: 1},
-                        {data: 2},
-                        {data: 3},
-                        {data: 4},
-                        {data: 5},
-                        {data: 6},
-                        {data: 7}
-                    ],
-                    order: [[1, "asc"]],
-                    pageLength: 25,
-                    lengthMenu: [[10, 25, 50, 141, -1], [10, 25, 50, 141, "Visi"]],
-                    language: {
-                        url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/lt.json"
-                    }
-                });
-
-                table.on('draw.dt', function () {
-                    var info = table.page.info();
-                    table.column(0, {page: 'current'}).nodes().each(function (cell, i) {
-                        cell.innerHTML = info.start + i + 1;
-                    });
-                });
-
-                table.draw();
+                data.push([
+                    r[1],
+                    parseInt(r[2] || "0", 10),
+                    parseInt(r[3] || "0", 10),
+                    parseInt(r[4] || "0", 10),
+                    parseInt(r[5] || "0", 10),
+                    parseInt(r[6] || "0", 10),
+                    parseInt(r[7] || "0", 10),
+                    parseInt(r[8] || "0", 10)
+                ]);
             }
-        });
 
+            var table = $('#balsavimai').DataTable({
+                data: data,
+                columns: [
+                    {data: null, searchable: false, orderable: false},
+                    {data: 0},
+                    {data: 1},
+                    {data: 2},
+                    {data: 3},
+                    {data: 4},
+                    {data: 5},
+                    {data: 6},
+                    {data: 7}
+                ],
+                order: [[1, "asc"]],
+                pageLength: 25,
+                lengthMenu: [[10,25,50,141,-1],[10,25,50,141,"Visi"]],
+                language: { url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/lt.json" }
+            });
+
+            table.on('draw.dt', function () {
+                var info = table.page.info();
+                table.column(0, {page:'current'}).nodes().each(function (cell, i) {
+                    cell.innerHTML = info.start + i + 1;
+                });
+            });
+
+            table.draw();
+        }
     });
+});
 </script>
 
 </body>
