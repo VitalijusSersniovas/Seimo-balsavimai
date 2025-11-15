@@ -2,11 +2,11 @@
 <html lang="lt">
 <head>
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Seimo narių balsavimo statistika</title>
 
-    <!-- DataTables (jQuery versija) CSS -->
-    <link rel="stylesheet"
-          href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css"/>
+    <!-- DataTables CSS -->
+    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/jquery.dataTables.min.css">
 
     <style>
         body {
@@ -29,26 +29,46 @@
 
         .hint {
             margin-top: 0;
-            margin-bottom: 1rem;
+            margin-bottom: 1.2rem;
             font-size: 0.95rem;
             color: #333;
             background: #f2f2f2;
-            padding: 10px 14px;
+            padding: 12px 14px;
             border-radius: 6px;
             display: inline-block;
-            max-width: 1100px;
+            max-width: 1200px;
+            line-height: 1.4;
         }
 
-        /* Stulpelių antraštės – rodo, kad galima spausti */
+        /* Lentelės dizainas */
+        #balsavimai {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
         #balsavimai thead th {
             white-space: nowrap;
             cursor: pointer;
             position: relative;
             padding-right: 16px;
+            font-size: 15px;
         }
 
-        #balsavimai {
-            width: 100%;
+        /* 1 stulpelis (Eil. Nr.) – siauras */
+        #balsavimai th:nth-child(1),
+        #balsavimai td:nth-child(1) {
+            width: 40px !important;
+            max-width: 40px !important;
+            min-width: 40px !important;
+            text-align: center !important;
+        }
+
+        /* 2 stulpelis – Seimo narys (platus) */
+        #balsavimai th:nth-child(2),
+        #balsavimai td:nth-child(2) {
+            width: 260px !important;
+            min-width: 260px !important;
+            text-align: left;
         }
     </style>
 </head>
@@ -57,119 +77,84 @@
 <h1>Seimo narių balsavimo statistika</h1>
 <p class="subtitle">Laikotarpis: 2024-11-14 – 2025-11-14</p>
 
-<p class="hint">
-    Patarimas: norėdami patogiai peržiūrėti duomenis, spauskite ant stulpelių
-    pavadinimų („Nedalyvavo“, „Prieš“, „Už“, „Susilaikė“, „Registravosi“, „Už A“, „Už B“).
-    Lentelė iškart bus surikiuota pagal pasirinktą pjūvį – taip lengviau matyti, kas
-    daugiausiai nedalyvavo, balsavo prieš ar susilaikė.
-</p>
+<div class="hint">
+    Patarimas: norėdami patogiai peržiūrėti duomenis, spauskite ant stulpelių pavadinimų 
+    („Nedalyvavo“, „Prieš“, „Už“, „Susilaikė“, „Registravosi“, „Už A“, „Už B“). 
+    Lentelė iškart bus surikiuota pagal pasirinktą pjūvį – taip lengviau matyti, kas daugiausiai 
+    nedalyvavo, balsavo prieš ar susilaikė.
+</div>
 
 <table id="balsavimai" class="display">
     <thead>
-    <tr>
-        <th>Eil. Nr.</th>
-        <th>Seimo narys</th>
-        <th>Nedalyvavo</th>
-        <th>Prieš</th>
-        <th>Už</th>
-        <th>Susilaikė</th>
-        <th>Registravosi</th>
-        <th>Už A</th>
-        <th>Už B</th>
-    </tr>
+        <tr>
+            <th>Eil. Nr.</th>
+            <th>Seimo narys</th>
+            <th>Nedalyvavo</th>
+            <th>Prieš</th>
+            <th>Už</th>
+            <th>Susilaikė</th>
+            <th>Registravosi</th>
+            <th>Už A</th>
+            <th>Už B</th>
+        </tr>
     </thead>
     <tbody></tbody>
 </table>
 
 <!-- jQuery -->
-<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
 
-<!-- DataTables JS (jQuery) -->
+<!-- DataTables JS -->
 <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
 
-<!-- PapaParse CSV parsavimui -->
+<!-- PapaParse CSV loader -->
 <script src="https://cdnjs.cloudflare.com/ajax/libs/PapaParse/5.4.1/papaparse.min.js"></script>
 
 <script>
-    $(document).ready(function () {
+$(document).ready(function () {
 
-        Papa.parse("metu_balsavimas1.csv", {
-            download: true,
-            delimiter: ";",          // tavo faile skyriklis – kabliataškis
-            skipEmptyLines: true,
-            complete: function (results) {
+    Papa.parse("metu_balsavimas1.csv", {
+        download: true,
+        header: true,
+        complete: function (results) {
 
-                var rows = results.data;
-                var data = [];
+            let data = results.data;
 
-                // Pirmos 3 eilutės – antraštės/komentarai,
-                // todėl tikri duomenys prasideda nuo 4 eilutės (indeksas 3)
-                for (var i = 3; i < rows.length; i++) {
-                    var r = rows[i];
-                    if (!r || r.length < 9) continue;
+            // išrūšiuojame pagal pavardę (2 stulpelis), kaip pirminę tvarką
+            data.sort((a, b) => (a["Seimo narys"] > b["Seimo narys"]) ? 1 : -1);
 
-                    // CSV stulpelių indeksai:
-                    // 0 - Eil. Nr. (ignoruojame, patys numeruosime)
-                    // 1 - Seimo narys
-                    // 2 - Nedalyvavo
-                    // 3 - Prieš
-                    // 4 - Už
-                    // 5 - Susilaikė
-                    // 6 - Registravosi
-                    // 7 - Už A
-                    // 8 - Už B
+            let tableData = [];
 
-                    data.push([
-                        r[1],                          // 0: Seimo narys
-                        parseInt(r[2] || "0", 10),     // 1: Nedalyvavo
-                        parseInt(r[3] || "0", 10),     // 2: Prieš
-                        parseInt(r[4] || "0", 10),     // 3: Už
-                        parseInt(r[5] || "0", 10),     // 4: Susilaikė
-                        parseInt(r[6] || "0", 10),     // 5: Registravosi
-                        parseInt(r[7] || "0", 10),     // 6: Už A
-                        parseInt(r[8] || "0", 10)      // 7: Už B
-                    ]);
-                }
+            data.forEach((row, index) => {
+                tableData.push([
+                    index + 1,                    // stabili numeracija 1-141
+                    row["Seimo narys"],
+                    row["Nedalyvavo"],
+                    row["Prieš"],
+                    row["Už"],
+                    row["Susilaikė"],
+                    row["Registravosi"],
+                    row["Už A"],
+                    row["Už B"]
+                ]);
+            });
 
-                var table = $('#balsavimai').DataTable({
-                    data: data,
-                    columns: [
-                        {   // Eil. Nr. – pildysime draw metu
-                            data: null,
-                            searchable: false,
-                            orderable: false
-                        },
-                        {data: 0}, // Seimo narys
-                        {data: 1}, // Nedalyvavo
-                        {data: 2}, // Prieš
-                        {data: 3}, // Už
-                        {data: 4}, // Susilaikė
-                        {data: 5}, // Registravosi
-                        {data: 6}, // Už A
-                        {data: 7}  // Už B
-                    ],
-                    order: [[1, "asc"]],   // pradinė rikiuotė – abėcėle pagal pavardę
-                    pageLength: 25,
-                    lengthMenu: [[10, 25, 50, 141, -1], [10, 25, 50, 141, "Visi"]],
-                    language: {
-                        url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/lt.json"
-                    }
-                });
-
-                // Stabilus Eil. Nr. per visus pjūvius (sort, filter, puslapiai)
-                table.on('draw.dt', function () {
-                    var info = table.page.info();
-                    table.column(0, {page: 'current'}).nodes().each(function (cell, i) {
-                        cell.innerHTML = info.start + i + 1;
-                    });
-                });
-
-                // Pirmas numeracijos uždėjimas
-                table.draw();
-            }
-        });
-
+            $("#balsavimai").DataTable({
+                data: tableData,
+                pageLength: 25,
+                lengthMenu: [25, 50, 100, 141],
+                order: [],   
+                language: {
+                    search: "Ieškoti:",
+                    lengthMenu: "Rodyti _MENU_ įrašus"
+                },
+                columnDefs: [
+                    { orderable: false, targets: 0 } // Eil. Nr. nerūšiuojamas
+                ]
+            });
+        }
     });
+});
 </script>
 
 </body>
