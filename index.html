@@ -63,57 +63,52 @@ document.addEventListener("DOMContentLoaded", function() {
         complete: function(results) {
 
             var rows = results.data;
-            var items = [];
+            var data = [];
 
             // Pirmos 3 eilutės – antraštės, tikrieji duomenys nuo 4-os
             for (var i = 3; i < rows.length; i++) {
                 var r = rows[i];
                 if (!r || r.length < 9) continue;
 
-                items.push({
-                    name: r[1],
-                    ned:  parseInt(r[2] || "0", 10),
-                    pries: parseInt(r[3] || "0", 10),
-                    uz:   parseInt(r[4] || "0", 10),
-                    sus:  parseInt(r[5] || "0", 10),
-                    reg:  parseInt(r[6] || "0", 10),
-                    ua:   parseInt(r[7] || "0", 10),
-                    ub:   parseInt(r[8] || "0", 10)
-                });
-            }
-
-            // Čia nusprendžiame, pagal ką reitinguojame – pvz. pagal "Nedalyvavo" (nuo daugiausia iki mažiausia)
-            items.sort(function(a, b) {
-                return b.ned - a.ned;
-            });
-
-            // Sukuriame DataTables duomenų masyvą:
-            // 1 stulpelis – reitingas (1–141), NE iš failo
-            var data = [];
-            for (var i = 0; i < items.length; i++) {
-                var it = items[i];
+                // Čia specialiai NENAUDOJAM Eil. Nr. iš failo
+                // Mums reikia tik faktiškų balsavimo skaičių
                 data.push([
-                    i + 1,        // Eil. Nr. = 1..141, fiksuotas
-                    it.name,
-                    it.ned,
-                    it.pries,
-                    it.uz,
-                    it.sus,
-                    it.reg,
-                    it.ua,
-                    it.ub
+                    r[1], // 0: Seimo narys
+                    parseInt(r[2] || "0", 10), // 1: Nedalyvavo
+                    parseInt(r[3] || "0", 10), // 2: Prieš
+                    parseInt(r[4] || "0", 10), // 3: Už
+                    parseInt(r[5] || "0", 10), // 4: Susilaikė
+                    parseInt(r[6] || "0", 10), // 5: Registravosi
+                    parseInt(r[7] || "0", 10), // 6: Už A
+                    parseInt(r[8] || "0", 10)  // 7: Už B
                 ]);
             }
 
             new DataTable("#balsavimai", {
                 data: data,
+                columns: [
+                    {   // Eil. Nr. – dinamiškai skaičiuojamas pagal eilutės poziciją
+                        data: null,
+                        searchable: false,
+                        orderable: false,
+                        render: function (data, type, row, meta) {
+                            // numeruoja matomas eilutes nuo 1 iki N
+                            return meta.row + 1;
+                        }
+                    },
+                    { data: 0 }, // Seimo narys
+                    { data: 1 }, // Nedalyvavo
+                    { data: 2 }, // Prieš
+                    { data: 3 }, // Už
+                    { data: 4 }, // Susilaikė
+                    { data: 5 }, // Registravosi
+                    { data: 6 }, // Už A
+                    { data: 7 }  // Už B
+                ],
+                // Pradinis vaizdas – abėcėle pagal Seimo narį (2-as stulpelis, indeksas 1)
+                order: [[1, "asc"]],
                 pageLength: 25,
                 lengthMenu: [[10, 25, 50, 141, -1], [10, 25, 50, 141, "Visi"]],
-                // pradinė tvarka – kaip reitinge (1–141)
-                order: [],
-                columnDefs: [
-                    { targets: 0, orderable: false, searchable: false } // Eil. Nr. nerūšiuojamas ir nefiltruojamas
-                ],
                 language: {
                     url: "https://cdn.datatables.net/plug-ins/2.1.8/i18n/lt.json"
                 }
