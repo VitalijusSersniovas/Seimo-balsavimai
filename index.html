@@ -2,24 +2,15 @@
 <html lang="lt">
 <head>
     <meta charset="UTF-8">
-    <title>Seimo narių balsavimo statistika 2024-11-14 / 2025-11-14</title>
+    <title>Seimo narių balsavimo statistika</title>
 
     <!-- DataTables CSS -->
     <link rel="stylesheet" href="https://cdn.datatables.net/2.1.8/css/dataTables.dataTables.min.css">
 
     <style>
         body {
-            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+            font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI";
             margin: 20px;
-        }
-        h1 {
-            margin-bottom: 0.2rem;
-        }
-        .subtitle {
-            margin-top: 0;
-            margin-bottom: 1rem;
-            color: #555;
-            font-size: 0.9rem;
         }
         table.dataTable thead th {
             white-space: nowrap;
@@ -27,103 +18,90 @@
     </style>
 </head>
 <body>
-    <h1>Seimo narių balsavimo statistika</h1>
-    <p class="subtitle">
-        Laikotarpis: 2024-11-14 – 2025-11-14. Lentelę galima rūšiuoti paspaudus ant stulpelių pavadinimų ir
-        filtruoti viršuje esančiame paieškos laukelyje.
-    </p>
 
-    <table id="balsavimai" class="display" style="width:100%">
-        <thead>
-            <tr>
-                <th>Eil. Nr.</th>
-                <th>Seimo narys</th>
-                <th>Nedalyvavo</th>
-                <th>Prieš</th>
-                <th>Už</th>
-                <th>Susilaikė</th>
-                <th>Registravosi</th>
-                <th>Už A</th>
-                <th>Už B</th>
-            </tr>
-        </thead>
-        <tbody>
-            <!-- Eilutės bus užpildytos automatiškai iš CSV -->
-        </tbody>
-    </table>
+<h1>Seimo narių balsavimo statistika</h1>
+<p>Laikotarpis: 2024-11-14 – 2025-11-14</p>
 
-    <!-- jQuery (DataTables priklausomybė) -->
-    <script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<table id="balsavimai" class="display" style="width:100%">
+    <thead>
+    <tr>
+        <th>Eil. Nr.</th>
+        <th>Seimo narys</th>
+        <th>Nedalyvavo</th>
+        <th>Prieš</th>
+        <th>Už</th>
+        <th>Susilaikė</th>
+        <th>Registravosi</th>
+        <th>Už A</th>
+        <th>Už B</th>
+    </tr>
+    </thead>
+    <tbody></tbody>
+</table>
 
-    <!-- DataTables JS -->
-    <script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
+<!-- Libraries -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+<script src="https://cdn.datatables.net/2.1.8/js/dataTables.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
 
-    <!-- PapaParse – CSV nuskaitymui -->
-    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+<script>
+document.addEventListener("DOMContentLoaded", function() {
 
-    <script>
-        document.addEventListener("DOMContentLoaded", function() {
-            fetch("metu_balsavimas1.csv")
-                .then(function(response) { return response.text(); })
-                .then(function(csvText) {
-                    // Nuskaitome CSV be antraščių (jos pas tave užima kelias eilutes)
-                    var parsed = Papa.parse(csvText, {
-                        header: false,
-                        skipEmptyLines: true
-                    });
+    Papa.parse("metu balsavimas1.csv", {
+        download: true,
+        delimiter: ";",
+        skipEmptyLines: true,
+        complete: function(results) {
 
-                    var rows = parsed.data;
-                    var data = [];
+            var rows = results.data;
+            var data = [];
 
-                    // rows[0] - "Eil. Nr., Seimo nariai, BALSAVIMAI, ..."
-                    // rows[1] - " , , Pagrindiniai, ..."
-                    // rows[2] - " , , Nedalyvavo, Prieš, Už, ..."
-                    // Nuo rows[3] prasideda tikrieji duomenys
-                    for (var i = 3; i < rows.length; i++) {
-                        var r = rows[i];
-                        if (!r || r.length < 9) continue;
-                        if (!r[0]) continue; // praleidžiam tuščias eilutes
+            // tikrieji duomenys prasideda nuo 4-os eilutės
+            for (var i = 3; i < rows.length; i++) {
+                var r = rows[i];
+                if (!r || r.length < 9) continue;
 
-                        data.push({
-                            "Eil. Nr.": r[0],
-                            "Seimo narys": r[1],
-                            "Nedalyvavo": r[2],
-                            "Prieš": r[3],
-                            "Už": r[4],
-                            "Susilaikė": r[5],
-                            "Registravosi": r[6],
-                            "Už A": r[7],
-                            "Už B": r[8]
-                        });
-                    }
-
-                    new DataTable('#balsavimai', {
-                        data: data,
-                        columns: [
-                            { data: "Eil. Nr." },
-                            { data: "Seimo narys" },
-                            { data: "Nedalyvavo" },
-                            { data: "Prieš" },
-                            { data: "Už" },
-                            { data: "Susilaikė" },
-                            { data: "Registravosi" },
-                            { data: "Už A" },
-                            { data: "Už B" }
-                        ],
-                        // rodom 141 įrašą, bet galima persijungti į mažiau / visus
-                        pageLength: 25,
-                        lengthMenu: [[10, 25, 50, 141, -1], [10, 25, 50, 141, "Visi"]],
-                        // Fiksuotas eiliškumas pagal failą (1–141): nenurodom pradinio rikiavimo
-                        order: [],
-                        columnDefs: [
-                            { targets: 0, orderable: false, searchable: false }
-                        ],
-                        language: {
-                            url: "https://cdn.datatables.net/plug-ins/2.1.8/i18n/lt.json"
-                        }
-                    });
+                data.push({
+                    "Eil. Nr.": r[0],
+                    "Seimo narys": r[1],
+                    "Nedalyvavo": r[2],
+                    "Prieš": r[3],
+                    "Už": r[4],
+                    "Susilaikė": r[5],
+                    "Registravosi": r[6],
+                    "Už A": r[7],
+                    "Už B": r[8]
                 });
-        });
-    </script>
+            }
+
+            new DataTable("#balsavimai", {
+                data: data,
+                columns: [
+                    { data: "Eil. Nr." },
+                    { data: "Seimo narys" },
+                    { data: "Nedalyvavo" },
+                    { data: "Prieš" },
+                    { data: "Už" },
+                    { data: "Susilaikė" },
+                    { data: "Registravosi" },
+                    { data: "Už A" },
+                    { data: "Už B" }
+                ],
+                pageLength: 25,
+                lengthMenu: [[10, 25, 50, 141, -1], [10, 25, 50, 141, "Visi"]],
+                order: [],
+                columnDefs: [
+                    { targets: 0, orderable: false, searchable: false }
+                ],
+                language: {
+                    url: "https://cdn.datatables.net/plug-ins/2.1.8/i18n/lt.json"
+                }
+            });
+        }
+    });
+
+});
+</script>
+
 </body>
 </html>
