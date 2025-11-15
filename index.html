@@ -15,7 +15,7 @@
             background: #ffffff;
         }
 
-        /* === STICKY VIRŠUTINIS BLOKAS === */
+        /* === STICKY viršutinis blokas: pavadinimas + laikotarpis + patarimas === */
         .top-wrapper {
             position: sticky;
             top: 0;
@@ -25,7 +25,6 @@
             box-shadow: 0 2px 4px rgba(0,0,0,0.15);
         }
 
-        /* Kad tekstas nepriliptų per arti viršaus */
         .content {
             padding: 0 20px 20px 20px;
         }
@@ -54,28 +53,26 @@
             max-width: 1100px;
         }
 
+        /* Antraštės – be sticky, tik stiliaus detalės */
         #balsavimai thead th {
             white-space: nowrap;
             cursor: pointer;
             padding-right: 16px;
             background: white;
-            position: sticky;
-            top: 145px;   /* žemiau viršutinio bloko */
-            z-index: 40;
         }
 
         #balsavimai {
             width: 100%;
         }
 
-        /* PIRMAS STULPELIS – siauras */
+        /* 1 stulpelis siauras */
         #balsavimai td:nth-child(1),
         #balsavimai th:nth-child(1) {
             width: 50px !important;
             text-align: center;
         }
 
-        /* ANTRAS STULPELIS – platesnis */
+        /* 2 stulpelis platesnis – vardai/pavardės */
         #balsavimai td:nth-child(2),
         #balsavimai th:nth-child(2) {
             width: 260px !important;
@@ -97,22 +94,22 @@
 </div>
 
 <div class="content">
-<table id="balsavimai" class="display">
-    <thead>
-    <tr>
-        <th>Eil. Nr.</th>
-        <th>Seimo narys</th>
-        <th>Nedalyvavo</th>
-        <th>Prieš</th>
-        <th>Už</th>
-        <th>Susilaikė</th>
-        <th>Registravosi</th>
-        <th>Už A</th>
-        <th>Už B</th>
-    </tr>
-    </thead>
-    <tbody></tbody>
-</table>
+    <table id="balsavimai" class="display">
+        <thead>
+        <tr>
+            <th>Eil. Nr.</th>
+            <th>Seimo narys</th>
+            <th>Nedalyvavo</th>
+            <th>Prieš</th>
+            <th>Už</th>
+            <th>Susilaikė</th>
+            <th>Registravosi</th>
+            <th>Už A</th>
+            <th>Už B</th>
+        </tr>
+        </thead>
+        <tbody></tbody>
+    </table>
 </div>
 
 <!-- JS -->
@@ -132,44 +129,48 @@ $(document).ready(function () {
             var rows = results.data;
             var data = [];
 
+            // tikri duomenys nuo 4-os eilutės
             for (var i = 3; i < rows.length; i++) {
                 var r = rows[i];
                 if (!r || r.length < 9) continue;
 
                 data.push([
-                    r[1],
-                    parseInt(r[2] || "0", 10),
-                    parseInt(r[3] || "0", 10),
-                    parseInt(r[4] || "0", 10),
-                    parseInt(r[5] || "0", 10),
-                    parseInt(r[6] || "0", 10),
-                    parseInt(r[7] || "0", 10),
-                    parseInt(r[8] || "0", 10)
+                    r[1],                          // Seimo narys
+                    parseInt(r[2] || "0", 10),     // Nedalyvavo
+                    parseInt(r[3] || "0", 10),     // Prieš
+                    parseInt(r[4] || "0", 10),     // Už
+                    parseInt(r[5] || "0", 10),     // Susilaikė
+                    parseInt(r[6] || "0", 10),     // Registravosi
+                    parseInt(r[7] || "0", 10),     // Už A
+                    parseInt(r[8] || "0", 10)      // Už B
                 ]);
             }
 
             var table = $('#balsavimai').DataTable({
                 data: data,
                 columns: [
-                    {data: null, searchable: false, orderable: false},
-                    {data: 0},
-                    {data: 1},
-                    {data: 2},
-                    {data: 3},
-                    {data: 4},
-                    {data: 5},
-                    {data: 6},
-                    {data: 7}
+                    {data: null, searchable: false, orderable: false}, // Eil. Nr.
+                    {data: 0}, // Seimo narys
+                    {data: 1}, // Nedalyvavo
+                    {data: 2}, // Prieš
+                    {data: 3}, // Už
+                    {data: 4}, // Susilaikė
+                    {data: 5}, // Registravosi
+                    {data: 6}, // Už A
+                    {data: 7}  // Už B
                 ],
                 order: [[1, "asc"]],
                 pageLength: 25,
                 lengthMenu: [[10,25,50,141,-1],[10,25,50,141,"Visi"]],
-                language: { url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/lt.json" }
+                language: {
+                    url: "https://cdn.datatables.net/plug-ins/1.13.6/i18n/lt.json"
+                }
             });
 
+            // Stabilus Eil. Nr.
             table.on('draw.dt', function () {
                 var info = table.page.info();
-                table.column(0, {page:'current'}).nodes().each(function (cell, i) {
+                table.column(0, {page: 'current'}).nodes().each(function (cell, i) {
                     cell.innerHTML = info.start + i + 1;
                 });
             });
