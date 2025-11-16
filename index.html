@@ -204,18 +204,14 @@
   <div class="table-wrapper">
     <div class="table-container">
       <table id="statsTable">
-        <thead id="tableHead">
-          <!-- Antraštės bus užpildytos iš CSV -->
-        </thead>
-        <tbody id="tableBody">
-          <!-- Eilutės bus užpildytos iš CSV -->
-        </tbody>
+        <thead id="tableHead"></thead>
+        <tbody id="tableBody"></tbody>
       </table>
     </div>
   </div>
 
   <script>
-    // Galimi metinės statistikos failų pavadinimai – bandome kelis variantus
+    // Galimi metinės statistikos failų pavadinimai
     const STATS_FILE_CANDIDATES = [
       "metu balsavimas1.csv",
       "metu_balsavimas1.csv",
@@ -227,15 +223,15 @@
       "metu_balsavimas.csv"
     ];
 
-    // Partijų failas
     const PARTIES_FILE = "members_parties.csv";
 
-    // Globalūs kintamieji
-    const memberParty = {};      // { member: partyName }
-    let allRows = [];            // { name, partyName, partyCategory, metrics: {header: value} }
-    let headers = [];            // CSV antraštės (nuo 0 kolonos)
+    const memberParty = {};
+    let allRows = [];
+    let headers = [];
+    let nameColIndex = 0;
+
     let currentPartyFilter = "ALL";
-    let currentSort = { key: null, direction: "desc" }; // key = header arba "name" / "party"
+    let currentSort = { key: "name", direction: "asc" };
 
     const partyFilterSelect = document.getElementById("partyFilter");
     const statusEl = document.getElementById("status");
@@ -243,7 +239,6 @@
     const tableHead = document.getElementById("tableHead");
     const tableBody = document.getElementById("tableBody");
 
-    // Partijų spalvos – tokios pačios kaip balsavimų panašumo įrankyje
     const categoryColors = {
       "Tėvynės sąjunga–LKD": "#43BBAE",
       "Liberalai": "#FDBB38",
@@ -283,7 +278,6 @@
       return categoryColors[category] || "#9e9e9e";
     }
 
-    // CSV nuskaitymas
     async function loadCSV(url) {
       const resp = await fetch(url);
       if (!resp.ok) {
@@ -302,6 +296,7 @@
         const line = lines[i];
         if (!line.trim()) continue;
         const cols = line.split(delimiter);
+        // jei trūksta stulpelių – praleidžiam
         if (cols.length < headerArr.length) continue;
         rows.push(cols);
       }
@@ -328,7 +323,6 @@
       }
     }
 
-    // Bandom kelių galimų metinės statistikos failų pavadinimus
     async function loadStats() {
       let lastError = null;
       for (const fname of STATS_FILE_CANDIDATES) {
@@ -336,31 +330,41 @@
           const { headers: h, rows } = await loadCSV(fname);
           headers = h;
 
-          if (headers.length < 2) {
-            throw new Error("Metų balsavimo faile " + fname + " pirmas stulpelis turi būti vardas pavardė, o kiti – skaičiai.");
+          // Surandame "Seimo narys" stulpelį
+          nameColIndex = 0;
+          for (let i = 0; i < headers.length; i++) {
+            const t = headers[i].toLowerCase();
+            if (t.includes("seimo narys")) {
+              nameColIndex = i;
+              break;
+            }
           }
 
           allRows = rows.map(cols => {
-            const name = cols[0].trim();
+            const rawName = (cols[nameColIndex] || "").trim();
+            const name = rawName;
+
             const partyName = memberParty[name] || "";
             const partyCategory = getPartyCategory(partyName);
+
             const metrics = {};
-            for (let i = 1; i < headers.length; i++) {
+            for (let i = 0; i < headers.length; i++) {
+              if (i === nameColIndex) continue;
+              const header = headers[i];
               const raw = (cols[i] || "").trim();
               const value = raw === "" ? 0 : Number(raw.replace(",", "."));
-              metrics[headers[i]] = Number.isFinite(value) ? value : 0;
+              metrics[header] = Number.isFinite(value) ? value : (raw || 0);
             }
+
             return { name, partyName, partyCategory, metrics };
           });
 
           statusEl.textContent = "Duomenys įkelti iš failo: " + fname;
-          return; // pavyko – išeinam iš funkcijos
+          return;
         } catch (e) {
           lastError = e;
-          // bandom kitą pavadinimą
         }
       }
-      // jei čia atėjome – nepavyko nė vienas iš kandidatų
       throw lastError || new Error("Nepavyko rasti metinės statistikos failo.");
     }
 
@@ -398,7 +402,7 @@
       tr.appendChild(thIndex);
 
       const thName = document.createElement("th");
-      thName.textContent = headers[0] || "Vardas, pavardė";
+      thName.textContent = headers[nameColIndex] || "Seimo narys";
       thName.classList.add("sortable");
       thName.dataset.sortKey = "name";
       tr.appendChild(thName);
@@ -409,7 +413,8 @@
       thParty.dataset.sortKey = "party";
       tr.appendChild(thParty);
 
-      for (let i = 1; i < headers.length; i++) {
+      for (let i = 0; i < headers.length; i++) {
+        if (i === nameColIndex) continue;
         const th = document.createElement("th");
         th.textContent = headers[i];
         th.classList.add("sortable");
@@ -455,7 +460,12 @@
           }
           const av = a.metrics[key] ?? 0;
           const bv = b.metrics[key] ?? 0;
-          return (av - bv) * dir;
+          const na = Number(av);
+          const nb = Number(bv);
+          if (Number.isFinite(na) && Number.isFinite(nb)) {
+            return (na - nb) * dir;
+          }
+          return String(av).localeCompare(String(bv), "lt") * dir;
         });
       }
 
@@ -490,7 +500,8 @@
         }
         tr.appendChild(tdParty);
 
-        for (let i = 1; i < headers.length; i++) {
+        for (let i = 0; i < headers.length; i++) {
+          if (i === nameColIndex) continue;
           const key = headers[i];
           const td = document.createElement("td");
           td.textContent = row.metrics[key] ?? 0;
