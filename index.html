@@ -126,7 +126,7 @@
 
     .party-cell {
       white-space: nowrap;
-      width: 240px;
+      width: 260px;
     }
 
     .party-badge {
@@ -232,7 +232,7 @@
   </div>
 
   <script>
-    // Galimi metinės statistikos failų pavadinimai
+    // Galimi statistikos failo pavadinimai (palieku kelis variantus – tau tinka tas, kuris yra realiai)
     const STATS_FILE_CANDIDATES = [
       "metu balsavimas1.csv",
       "metu_balsavimas1.csv",
@@ -248,11 +248,11 @@
     const memberParty = {};
     let allRows = [];
     let headers = [];
-    let nameColIndex = 0;
-    let metricHeadersFromCsv = [];
-    const computedHeaders = ["Aktyvumo indeksas", "Dalyvavimo dalis „Už“"];
-    let allMetricHeaders = [];
+    let nameColIndex = 0;           // "Seimo nariai" stulpelio indeksas
+    let metricHeadersFromCsv = [];  // visi balsavimo skaitiniai stulpeliai
+    let allMetricHeaders = [];      // čia = metricHeadersFromCsv
 
+    // Nuorodos į konkrečius stulpelius (pagal pavadinimą)
     let keyNed, keyPries, keyUz, keySus, keyReg, keyUzA, keyUzB;
 
     let currentPartyFilter = "ALL";
@@ -265,6 +265,7 @@
     const tableHead = document.getElementById("tableHead");
     const tableBody = document.getElementById("tableBody");
 
+    // Tos pačios partijos ir spalvos, kaip kitame tavo įrankyje
     const categoryColors = {
       "Tėvynės sąjunga–LKD": "#43BBAE",
       "Liberalai": "#FDBB38",
@@ -355,12 +356,12 @@
         try {
           const { lines } = await loadCSV(fname);
 
-          // 1–2 eilutės – paaiškinimai, 3–ia – tikra antraštė
+          // 1–2 eilutės – paaiškinimai, 3–ia – tikroji antraštė
           const headerLine = lines[2];
           const delimiter = headerLine.includes(";") ? ";" : ",";
           headers = headerLine.split(delimiter).map(h => h.trim());
 
-          // rasti "Seimo nariai" stulpelį
+          // Randam "Seimo nariai" stulpelį
           nameColIndex = 0;
           for (let i = 0; i < headers.length; i++) {
             const t = headers[i].toLowerCase();
@@ -370,15 +371,15 @@
             }
           }
 
-          // kokius stulpelius laikome metrika
+          // Kurie stulpeliai – metrika (skaičiai)?
           metricHeadersFromCsv = headers.filter((h, i) => {
             if (i === nameColIndex) return false;
             if (!h.trim()) return false;
-            if (/eil/.test(h.toLowerCase())) return false;
+            if (/eil/.test(h.toLowerCase())) return false; // "Eil. Nr." atmetam
             return true;
           });
 
-          // nuskaityti eilutes
+          // Nuskaitom eilutes
           allRows = [];
           for (let i = 3; i < lines.length; i++) {
             const line = lines[i];
@@ -388,7 +389,7 @@
 
             const rawName = (cols[nameColIndex] || "").trim();
             if (!rawName) continue;
-            const name = rawName;
+            const name = rawName; // "Seimo narys" – kaip faile
 
             const partyName = memberParty[name] || "";
             const partyCategory = getPartyCategory(partyName);
@@ -405,34 +406,18 @@
             allRows.push({ name, partyName, partyCategory, metrics });
           }
 
-          // susieti stulpelių pavadinimus su logika
-          keyNed = findHeaderKey(metricHeadersFromCsv, "nedalyvavo");
+          // Susidėliojam visas metrikas (tik iš failo, be jokių papildomų indeksų)
+          allMetricHeaders = metricHeadersFromCsv.slice();
+
+          // Susikabinam nuorodas į pagrindinius stulpelius (rodiklių filtrui)
+          keyNed  = findHeaderKey(metricHeadersFromCsv, "nedalyvavo");
           keyPries = findHeaderKey(metricHeadersFromCsv, "prieš") || findHeaderKey(metricHeadersFromCsv, "pries");
-          keyUz = findHeaderKey(metricHeadersFromCsv, "už") || findHeaderKey(metricHeadersFromCsv, "uz");
-          keySus = findHeaderKey(metricHeadersFromCsv, "susilaik");
-          keyReg = findHeaderKey(metricHeadersFromCsv, "registrav");
-          keyUzA = findHeaderKey(metricHeadersFromCsv, "už a") || findHeaderKey(metricHeadersFromCsv, "uz a");
-          keyUzB = findHeaderKey(metricHeadersFromCsv, "už b") || findHeaderKey(metricHeadersFromCsv, "uz b");
+          keyUz   = findHeaderKey(metricHeadersFromCsv, "už")   || findHeaderKey(metricHeadersFromCsv, "uz");
+          keySus  = findHeaderKey(metricHeadersFromCsv, "susilaik");
+          keyReg  = findHeaderKey(metricHeadersFromCsv, "registrav");
+          keyUzA  = findHeaderKey(metricHeadersFromCsv, "už a") || findHeaderKey(metricHeadersFromCsv, "uz a");
+          keyUzB  = findHeaderKey(metricHeadersFromCsv, "už b") || findHeaderKey(metricHeadersFromCsv, "uz b");
 
-          // papildomi indeksai
-          for (const row of allRows) {
-            const ned = (keyNed && row.metrics[keyNed]) || 0;
-            const pries = (keyPries && row.metrics[keyPries]) || 0;
-            const uz = (keyUz && row.metrics[keyUz]) || 0;
-            const sus = (keySus && row.metrics[keySus]) || 0;
-            const reg = (keyReg && row.metrics[keyReg]) || 0;
-
-            const denominatorTotal = uz + pries + sus + ned + reg;
-            const denominatorVote = uz + pries + sus;
-
-            const activeIndex = denominatorTotal > 0 ? (uz + pries + sus + reg) / denominatorTotal : 0;
-            const uzShare = denominatorVote > 0 ? uz / denominatorVote : 0;
-
-            row.metrics[computedHeaders[0]] = activeIndex; // 0–1
-            row.metrics[computedHeaders[1]] = uzShare;     // 0–1
-          }
-
-          allMetricHeaders = metricHeadersFromCsv.concat(computedHeaders);
           statusEl.textContent = "Duomenys įkelti iš failo: " + fname;
           return;
         } catch (e) {
@@ -506,18 +491,17 @@
           if (currentSort.key === key) {
             currentSort.direction = currentSort.direction === "asc" ? "desc" : "asc";
           } else {
-            currentSort.key = key;
-            currentSort.direction = key === "name" || key === "party" ? "asc" : "desc";
+            // Tekstui – asc, skaičiams – desc
+            if (key === "name" || key === "party") {
+              currentSort = { key, direction: "asc" };
+            } else {
+              currentSort = { key, direction: "desc" };
+            }
           }
-          metricFilterSelect.value = ""; // nuimame specialų filtrą
+          metricFilterSelect.value = ""; // nuimame specialų rodiklio filtrą
           renderTable();
         });
       });
-    }
-
-    function formatPercent(value) {
-      const v = (value || 0) * 100;
-      return v.toFixed(1).replace(".", ",") + " %";
     }
 
     function renderTable() {
@@ -576,7 +560,7 @@
         if (row.partyName) {
           const span = document.createElement("span");
           span.className = "party-badge";
-          span.textContent = row.partyName;
+          span.textContent = row.partyName;  // pilnas frakcijos / partijos pavadinimas
           span.style.backgroundColor = getPartyColor(row.partyCategory);
           tdParty.appendChild(span);
         }
@@ -585,13 +569,7 @@
         allMetricHeaders.forEach(header => {
           const td = document.createElement("td");
           const val = row.metrics[header] ?? 0;
-
-          if (computedHeaders.includes(header)) {
-            td.textContent = formatPercent(val);
-          } else {
-            td.textContent = Number(val || 0);
-          }
-
+          td.textContent = Number(val || 0);
           td.className = "number-cell";
           tr.appendChild(td);
         });
@@ -614,20 +592,20 @@
       }
 
       const map = {
-        "most_uz": { header: keyUz, dir: "desc" },
-        "least_uz": { header: keyUz, dir: "asc" },
-        "most_pries": { header: keyPries, dir: "desc" },
-        "least_pries": { header: keyPries, dir: "asc" },
-        "most_susilaike": { header: keySus, dir: "desc" },
-        "least_susilaike": { header: keySus, dir: "asc" },
-        "most_nedalyvavo": { header: keyNed, dir: "desc" },
-        "least_nedalyvavo": { header: keyNed, dir: "asc" },
-        "most_reg": { header: keyReg, dir: "desc" },
-        "least_reg": { header: keyReg, dir: "asc" },
-        "most_uz_a": { header: keyUzA, dir: "desc" },
-        "least_uz_a": { header: keyUzA, dir: "asc" },
-        "most_uz_b": { header: keyUzB, dir: "desc" },
-        "least_uz_b": { header: keyUzB, dir: "asc" }
+        "most_uz":       { header: keyUz,   dir: "desc" },
+        "least_uz":      { header: keyUz,   dir: "asc" },
+        "most_pries":    { header: keyPries,dir: "desc" },
+        "least_pries":   { header: keyPries,dir: "asc" },
+        "most_susilaike":{ header: keySus,  dir: "desc" },
+        "least_susilaike":{header: keySus,  dir: "asc" },
+        "most_nedalyvavo":{header: keyNed,  dir: "desc" },
+        "least_nedalyvavo":{header: keyNed, dir: "asc" },
+        "most_reg":      { header: keyReg,  dir: "desc" },
+        "least_reg":     { header: keyReg,  dir: "asc" },
+        "most_uz_a":     { header: keyUzA,  dir: "desc" },
+        "least_uz_a":    { header: keyUzA,  dir: "asc" },
+        "most_uz_b":     { header: keyUzB,  dir: "desc" },
+        "least_uz_b":    { header: keyUzB,  dir: "asc" }
       };
 
       const cfg = map[v];
@@ -646,7 +624,7 @@
         await loadStats();
         buildPartyFilterOptions();
         buildTableHead();
-        currentSort = { key: "name", direction: "asc" }; // pagal nutylėjimą – abėcėlė
+        currentSort = { key: "name", direction: "asc" }; // pagal nutylėjimą – abėcėle
         renderTable();
         statusEl.textContent = "Duomenys įkelti. Galite filtruoti ir rūšiuoti lentelę.";
         errorEl.style.display = "none";
