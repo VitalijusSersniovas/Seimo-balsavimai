@@ -86,7 +86,7 @@
     table {
       border-collapse: collapse;
       width: 100%;
-      min-width: 800px;
+      min-width: 900px;
     }
 
     th, td {
@@ -172,7 +172,7 @@
         font-size: 0.95rem;
       }
       table {
-        min-width: 700px;
+        min-width: 750px;
       }
     }
   </style>
@@ -196,9 +196,30 @@
         <option value="ALL">Visos partijos</option>
       </select>
     </div>
+
+    <div>
+      <label for="metricFilter">Filtruoti pagal pasirinkimą:</label>
+      <select id="metricFilter" disabled>
+        <option value="">— Pasirink rodiklį —</option>
+        <option value="most_uz">Daugiausiai Už</option>
+        <option value="least_uz">Mažiausiai Už</option>
+        <option value="most_pries">Daugiausiai Prieš</option>
+        <option value="least_pries">Mažiausiai Prieš</option>
+        <option value="most_susilaike">Daugiausiai Susilaikė</option>
+        <option value="least_susilaike">Mažiausiai Susilaikė</option>
+        <option value="most_nedalyvavo">Daugiausiai Nedalyvavo</option>
+        <option value="least_nedalyvavo">Mažiausiai Nedalyvavo</option>
+        <option value="most_reg">Daugiausiai Registravosi</option>
+        <option value="least_reg">Mažiausiai Registravosi</option>
+        <option value="most_uz_a">Daugiausiai Papildomi A (Už A)</option>
+        <option value="least_uz_a">Mažiausiai Papildomi A (Už A)</option>
+        <option value="most_uz_b">Daugiausiai Papildomi B (Už B)</option>
+        <option value="least_uz_b">Mažiausiai Papildomi B (Už B)</option>
+      </select>
+    </div>
   </div>
 
-  <div id="status" class="status">Bandome įkelti duomenis...</div>
+  <div id="status" class="status">Įkeliami duomenys...</div>
   <div id="error" class="error" style="display:none;"></div>
 
   <div class="table-wrapper">
@@ -222,18 +243,23 @@
       "metu balsavimas.csv",
       "metu_balsavimas.csv"
     ];
-
     const PARTIES_FILE = "members_parties.csv";
 
     const memberParty = {};
     let allRows = [];
     let headers = [];
     let nameColIndex = 0;
+    let metricHeadersFromCsv = [];
+    const computedHeaders = ["Aktyvumo indeksas", "Dalyvavimo dalis „Už“"];
+    let allMetricHeaders = [];
+
+    let keyNed, keyPries, keyUz, keySus, keyReg, keyUzA, keyUzB;
 
     let currentPartyFilter = "ALL";
     let currentSort = { key: "name", direction: "asc" };
 
     const partyFilterSelect = document.getElementById("partyFilter");
+    const metricFilterSelect = document.getElementById("metricFilter");
     const statusEl = document.getElementById("status");
     const errorEl = document.getElementById("error");
     const tableHead = document.getElementById("tableHead");
@@ -280,91 +306,140 @@
 
     async function loadCSV(url) {
       const resp = await fetch(url);
-      if (!resp.ok) {
-        throw new Error("Nepavyko nuskaityti failo: " + url);
-      }
+      if (!resp.ok) throw new Error("Nepavyko nuskaityti failo: " + url);
       const text = await resp.text();
       const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
-      if (lines.length < 2) {
-        throw new Error("Faile " + url + " per mažai eilučių.");
-      }
-      const headerLine = lines[0];
-      const delimiter = headerLine.includes(";") ? ";" : ",";
-      const headerArr = headerLine.split(delimiter).map(h => h.trim());
-      const rows = [];
-      for (let i = 1; i < lines.length; i++) {
-        const line = lines[i];
-        if (!line.trim()) continue;
-        const cols = line.split(delimiter);
-        // jei trūksta stulpelių – praleidžiam
-        if (cols.length < headerArr.length) continue;
-        rows.push(cols);
-      }
-      return { headers: headerArr, rows };
+      if (lines.length < 3) throw new Error("Faile " + url + " per mažai eilučių.");
+      return { lines };
     }
 
     async function loadParties() {
       try {
-        const { headers, rows } = await loadCSV(PARTIES_FILE);
-        const idxMember = headers.indexOf("member");
-        const idxParty = headers.indexOf("party");
-        if (idxMember === -1 || idxParty === -1) {
-          console.warn("members_parties.csv neturi stulpelių 'member' ir 'party'.");
-          return;
-        }
-        for (const cols of rows) {
-          const m = cols[idxMember].trim();
-          const p = cols[idxParty].trim();
+        const resp = await fetch(PARTIES_FILE);
+        if (!resp.ok) return;
+
+        const text = await resp.text();
+        const lines = text.split(/\r?\n/).filter(l => l.trim().length > 0);
+        if (lines.length < 2) return;
+
+        const headerLine = lines[0];
+        const delimiter = headerLine.includes(";") ? ";" : ",";
+        const headerArr = headerLine.split(delimiter).map(h => h.trim());
+        const idxMember = headerArr.indexOf("member");
+        const idxParty = headerArr.indexOf("party");
+        if (idxMember === -1 || idxParty === -1) return;
+
+        for (let i = 1; i < lines.length; i++) {
+          const line = lines[i];
+          const cols = line.split(delimiter);
+          if (cols.length <= Math.max(idxMember, idxParty)) continue;
+          const m = (cols[idxMember] || "").trim();
+          const p = (cols[idxParty] || "").trim();
           if (!m) continue;
           memberParty[m] = p;
         }
       } catch (e) {
-        console.warn("Nepavyko nuskaityti parties:", e);
+        console.warn("Nepavyko nuskaityti members_parties.csv:", e);
       }
+    }
+
+    function findHeaderKey(headersList, search) {
+      const s = search.toLowerCase();
+      return headersList.find(h => h.toLowerCase().includes(s)) || null;
     }
 
     async function loadStats() {
       let lastError = null;
+
       for (const fname of STATS_FILE_CANDIDATES) {
         try {
-          const { headers: h, rows } = await loadCSV(fname);
-          headers = h;
+          const { lines } = await loadCSV(fname);
 
-          // Surandame "Seimo narys" stulpelį
+          // 1–2 eilutės – paaiškinimai, 3–ia – tikra antraštė
+          const headerLine = lines[2];
+          const delimiter = headerLine.includes(";") ? ";" : ",";
+          headers = headerLine.split(delimiter).map(h => h.trim());
+
+          // rasti "Seimo nariai" stulpelį
           nameColIndex = 0;
           for (let i = 0; i < headers.length; i++) {
             const t = headers[i].toLowerCase();
-            if (t.includes("seimo narys")) {
+            if (t.includes("seimo nariai")) {
               nameColIndex = i;
               break;
             }
           }
 
-          allRows = rows.map(cols => {
+          // kokius stulpelius laikome metrika
+          metricHeadersFromCsv = headers.filter((h, i) => {
+            if (i === nameColIndex) return false;
+            if (!h.trim()) return false;
+            if (/eil/.test(h.toLowerCase())) return false;
+            return true;
+          });
+
+          // nuskaityti eilutes
+          allRows = [];
+          for (let i = 3; i < lines.length; i++) {
+            const line = lines[i];
+            if (!line.trim()) continue;
+            const cols = line.split(delimiter);
+            if (cols.length < headers.length) continue;
+
             const rawName = (cols[nameColIndex] || "").trim();
+            if (!rawName) continue;
             const name = rawName;
 
             const partyName = memberParty[name] || "";
             const partyCategory = getPartyCategory(partyName);
 
             const metrics = {};
-            for (let i = 0; i < headers.length; i++) {
-              if (i === nameColIndex) continue;
-              const header = headers[i];
-              const raw = (cols[i] || "").trim();
-              const value = raw === "" ? 0 : Number(raw.replace(",", "."));
-              metrics[header] = Number.isFinite(value) ? value : (raw || 0);
+            for (let c = 0; c < headers.length; c++) {
+              const header = headers[c];
+              if (!metricHeadersFromCsv.includes(header)) continue;
+              const raw = (cols[c] || "").trim();
+              const num = raw === "" ? 0 : Number(raw.replace(",", "."));
+              metrics[header] = Number.isFinite(num) ? num : 0;
             }
 
-            return { name, partyName, partyCategory, metrics };
-          });
+            allRows.push({ name, partyName, partyCategory, metrics });
+          }
 
+          // susieti stulpelių pavadinimus su logika
+          keyNed = findHeaderKey(metricHeadersFromCsv, "nedalyvavo");
+          keyPries = findHeaderKey(metricHeadersFromCsv, "prieš") || findHeaderKey(metricHeadersFromCsv, "pries");
+          keyUz = findHeaderKey(metricHeadersFromCsv, "už") || findHeaderKey(metricHeadersFromCsv, "uz");
+          keySus = findHeaderKey(metricHeadersFromCsv, "susilaik");
+          keyReg = findHeaderKey(metricHeadersFromCsv, "registrav");
+          keyUzA = findHeaderKey(metricHeadersFromCsv, "už a") || findHeaderKey(metricHeadersFromCsv, "uz a");
+          keyUzB = findHeaderKey(metricHeadersFromCsv, "už b") || findHeaderKey(metricHeadersFromCsv, "uz b");
+
+          // papildomi indeksai
+          for (const row of allRows) {
+            const ned = (keyNed && row.metrics[keyNed]) || 0;
+            const pries = (keyPries && row.metrics[keyPries]) || 0;
+            const uz = (keyUz && row.metrics[keyUz]) || 0;
+            const sus = (keySus && row.metrics[keySus]) || 0;
+            const reg = (keyReg && row.metrics[keyReg]) || 0;
+
+            const denominatorTotal = uz + pries + sus + ned + reg;
+            const denominatorVote = uz + pries + sus;
+
+            const activeIndex = denominatorTotal > 0 ? (uz + pries + sus + reg) / denominatorTotal : 0;
+            const uzShare = denominatorVote > 0 ? uz / denominatorVote : 0;
+
+            row.metrics[computedHeaders[0]] = activeIndex; // 0–1
+            row.metrics[computedHeaders[1]] = uzShare;     // 0–1
+          }
+
+          allMetricHeaders = metricHeadersFromCsv.concat(computedHeaders);
           statusEl.textContent = "Duomenys įkelti iš failo: " + fname;
           return;
         } catch (e) {
           lastError = e;
         }
       }
+
       throw lastError || new Error("Nepavyko rasti metinės statistikos failo.");
     }
 
@@ -391,6 +466,7 @@
       });
 
       partyFilterSelect.disabled = false;
+      metricFilterSelect.disabled = false;
     }
 
     function buildTableHead() {
@@ -402,7 +478,7 @@
       tr.appendChild(thIndex);
 
       const thName = document.createElement("th");
-      thName.textContent = headers[nameColIndex] || "Seimo narys";
+      thName.textContent = "Seimo narys";
       thName.classList.add("sortable");
       thName.dataset.sortKey = "name";
       tr.appendChild(thName);
@@ -413,14 +489,13 @@
       thParty.dataset.sortKey = "party";
       tr.appendChild(thParty);
 
-      for (let i = 0; i < headers.length; i++) {
-        if (i === nameColIndex) continue;
+      allMetricHeaders.forEach(header => {
         const th = document.createElement("th");
-        th.textContent = headers[i];
+        th.textContent = header;
         th.classList.add("sortable");
-        th.dataset.sortKey = headers[i];
+        th.dataset.sortKey = header;
         tr.appendChild(th);
-      }
+      });
 
       tableHead.appendChild(tr);
 
@@ -434,9 +509,15 @@
             currentSort.key = key;
             currentSort.direction = key === "name" || key === "party" ? "asc" : "desc";
           }
+          metricFilterSelect.value = ""; // nuimame specialų filtrą
           renderTable();
         });
       });
+    }
+
+    function formatPercent(value) {
+      const v = (value || 0) * 100;
+      return v.toFixed(1).replace(".", ",") + " %";
     }
 
     function renderTable() {
@@ -451,6 +532,7 @@
       if (currentSort.key) {
         const dir = currentSort.direction === "asc" ? 1 : -1;
         const key = currentSort.key;
+
         rows.sort((a, b) => {
           if (key === "name") {
             return a.name.localeCompare(b.name, "lt") * dir;
@@ -500,14 +582,19 @@
         }
         tr.appendChild(tdParty);
 
-        for (let i = 0; i < headers.length; i++) {
-          if (i === nameColIndex) continue;
-          const key = headers[i];
+        allMetricHeaders.forEach(header => {
           const td = document.createElement("td");
-          td.textContent = row.metrics[key] ?? 0;
+          const val = row.metrics[header] ?? 0;
+
+          if (computedHeaders.includes(header)) {
+            td.textContent = formatPercent(val);
+          } else {
+            td.textContent = Number(val || 0);
+          }
+
           td.className = "number-cell";
           tr.appendChild(td);
-        }
+        });
 
         tableBody.appendChild(tr);
       });
@@ -518,6 +605,40 @@
       renderTable();
     });
 
+    metricFilterSelect.addEventListener("change", () => {
+      const v = metricFilterSelect.value;
+      if (!v) {
+        currentSort = { key: "name", direction: "asc" };
+        renderTable();
+        return;
+      }
+
+      const map = {
+        "most_uz": { header: keyUz, dir: "desc" },
+        "least_uz": { header: keyUz, dir: "asc" },
+        "most_pries": { header: keyPries, dir: "desc" },
+        "least_pries": { header: keyPries, dir: "asc" },
+        "most_susilaike": { header: keySus, dir: "desc" },
+        "least_susilaike": { header: keySus, dir: "asc" },
+        "most_nedalyvavo": { header: keyNed, dir: "desc" },
+        "least_nedalyvavo": { header: keyNed, dir: "asc" },
+        "most_reg": { header: keyReg, dir: "desc" },
+        "least_reg": { header: keyReg, dir: "asc" },
+        "most_uz_a": { header: keyUzA, dir: "desc" },
+        "least_uz_a": { header: keyUzA, dir: "asc" },
+        "most_uz_b": { header: keyUzB, dir: "desc" },
+        "least_uz_b": { header: keyUzB, dir: "asc" }
+      };
+
+      const cfg = map[v];
+      if (!cfg || !cfg.header) {
+        currentSort = { key: "name", direction: "asc" };
+      } else {
+        currentSort = { key: cfg.header, direction: cfg.dir };
+      }
+      renderTable();
+    });
+
     (async function init() {
       try {
         statusEl.textContent = "Įkeliami partijų ir balsavimų duomenys...";
@@ -525,7 +646,7 @@
         await loadStats();
         buildPartyFilterOptions();
         buildTableHead();
-        currentSort = { key: "name", direction: "asc" };
+        currentSort = { key: "name", direction: "asc" }; // pagal nutylėjimą – abėcėlė
         renderTable();
         statusEl.textContent = "Duomenys įkelti. Galite filtruoti ir rūšiuoti lentelę.";
         errorEl.style.display = "none";
