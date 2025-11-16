@@ -215,8 +215,19 @@
   </div>
 
   <script>
-    // Failai
-    const STATS_FILE = "metu balsavimas1.csv";
+    // Galimi metinės statistikos failų pavadinimai – bandome kelis variantus
+    const STATS_FILE_CANDIDATES = [
+      "metu balsavimas1.csv",
+      "metu_balsavimas1.csv",
+      "metu-balsavimas1.csv",
+      "metu balsavimai1.csv",
+      "metu_balsavimai1.csv",
+      "metu-balsavimai1.csv",
+      "metu balsavimas.csv",
+      "metu_balsavimas.csv"
+    ];
+
+    // Partijų failas
     const PARTIES_FILE = "members_parties.csv";
 
     // Globalūs kintamieji
@@ -232,7 +243,7 @@
     const tableHead = document.getElementById("tableHead");
     const tableBody = document.getElementById("tableBody");
 
-    // Partijų spalvos – tokios pačios kaip kitame įrankyje
+    // Partijų spalvos – tokios pačios kaip balsavimų panašumo įrankyje
     const categoryColors = {
       "Tėvynės sąjunga–LKD": "#43BBAE",
       "Liberalai": "#FDBB38",
@@ -317,26 +328,40 @@
       }
     }
 
+    // Bandom kelių galimų metinės statistikos failų pavadinimus
     async function loadStats() {
-      const { headers: h, rows } = await loadCSV(STATS_FILE);
-      headers = h;
-      if (headers.length < 2) {
-        throw new Error("Metų balsavimo faile pirmas stulpelis turi būti vardas pavardė, o kiti – skaičiai.");
-      }
-      const nameHeader = headers[0];
+      let lastError = null;
+      for (const fname of STATS_FILE_CANDIDATES) {
+        try {
+          const { headers: h, rows } = await loadCSV(fname);
+          headers = h;
 
-      allRows = rows.map(cols => {
-        const name = cols[0].trim();
-        const partyName = memberParty[name] || "";
-        const partyCategory = getPartyCategory(partyName);
-        const metrics = {};
-        for (let i = 1; i < headers.length; i++) {
-          const raw = (cols[i] || "").trim();
-          const value = raw === "" ? 0 : Number(raw.replace(",", "."));
-          metrics[headers[i]] = Number.isFinite(value) ? value : 0;
+          if (headers.length < 2) {
+            throw new Error("Metų balsavimo faile " + fname + " pirmas stulpelis turi būti vardas pavardė, o kiti – skaičiai.");
+          }
+
+          allRows = rows.map(cols => {
+            const name = cols[0].trim();
+            const partyName = memberParty[name] || "";
+            const partyCategory = getPartyCategory(partyName);
+            const metrics = {};
+            for (let i = 1; i < headers.length; i++) {
+              const raw = (cols[i] || "").trim();
+              const value = raw === "" ? 0 : Number(raw.replace(",", "."));
+              metrics[headers[i]] = Number.isFinite(value) ? value : 0;
+            }
+            return { name, partyName, partyCategory, metrics };
+          });
+
+          statusEl.textContent = "Duomenys įkelti iš failo: " + fname;
+          return; // pavyko – išeinam iš funkcijos
+        } catch (e) {
+          lastError = e;
+          // bandom kitą pavadinimą
         }
-        return { name, partyName, partyCategory, metrics };
-      });
+      }
+      // jei čia atėjome – nepavyko nė vienas iš kandidatų
+      throw lastError || new Error("Nepavyko rasti metinės statistikos failo.");
     }
 
     function buildPartyFilterOptions() {
@@ -489,7 +514,7 @@
         await loadStats();
         buildPartyFilterOptions();
         buildTableHead();
-        currentSort = { key: headers[0] ? "name" : null, direction: "asc" };
+        currentSort = { key: "name", direction: "asc" };
         renderTable();
         statusEl.textContent = "Duomenys įkelti. Galite filtruoti ir rūšiuoti lentelę.";
         errorEl.style.display = "none";
