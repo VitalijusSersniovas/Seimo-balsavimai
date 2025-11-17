@@ -290,7 +290,7 @@
 
     // Nuskaitome metinę statistiką
     async function loadYearStats() {
-      const response = await fetch("metu balsavimas1.csv");
+      const response = await fetch("metu_balsavimas1.csv");
       if (!response.ok) {
         throw new Error("Nepavyko nuskaityti failo „metu balsavimas1.csv“. Patikrink, ar jis yra šalia HTML.");
       }
